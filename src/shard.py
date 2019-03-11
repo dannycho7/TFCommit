@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 class Shard:
 	def __init__(self, i):
 		self.i = i

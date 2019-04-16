@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-from lib.blockchain import Blockchain
+from lib.blockchain import *
 
 class Shard:
 	def __init__(self, bch: Blockchain):

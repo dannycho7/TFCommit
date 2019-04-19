@@ -2,6 +2,7 @@
 
 import json
 from lib.blockchain import *
+import lib.messaging as messaging
 
 class Shard:
 	def __init__(self, global_conf, shard_i, bch = Blockchain()):
@@ -9,13 +10,11 @@ class Shard:
 		self.bch = bch
 		self.current_transaction = None
 		self.vote_decisions = []
+	def broadcast(self, msg):
+		messaging.broadcast(msg, self.global_conf['servers'][:shard_i] + self.global_conf['servers'][shard_i+1:])
 	def recvEndTransaction(self, mu):
-		"""
-		T_i, ts_i, r_w_set = mu (deconstruct)
-		self.current_transaction = mu
-		send signed(get_vote(b_i, mu)) to all shards in T_i
-		"""
-		pass
+		self.current_transaction = self.bch.createBlock(1, RWSet(), [])
+		self.broadcast(create_get_vote_msg(self.current_transaction))
 	def recvGetVote(self, vote_req):
 		"""
 		if message contains valid signature then

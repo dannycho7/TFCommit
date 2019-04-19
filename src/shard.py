@@ -1,9 +1,11 @@
 #! /usr/bin/env python3
 
+import json
 from lib.blockchain import *
 
 class Shard:
-	def __init__(self, bch: Blockchain):
+	def __init__(self, global_conf, shard_i, bch = Blockchain()):
+		self.global_conf = global_conf
 		self.bch = bch
 		self.current_transaction = None
 		self.vote_decisions = []
@@ -54,3 +56,10 @@ class Shard:
 		send b_i and multisig to client and cohorts.
 		"""
 		pass
+
+if __name__ == "__main__":
+	if len(sys.argv) != 2:
+		print("Correct Usage: {0} <config_file_path>".format(sys.argv[0]))
+		sys.exit()
+	config = json.load(open(sys.argv[1]))
+	sh = Shard(config)

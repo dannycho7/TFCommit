@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 
+import ast
 import json
+import socket
 from lib.blockchain import *
 import lib.messaging as messaging
+import lib.msg_types as msg_types
 
 class Shard:
 	def __init__(self, global_conf, shard_i, bch = Blockchain()):
@@ -57,8 +60,18 @@ class Shard:
 		pass
 
 if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print("Correct Usage: {0} <config_file_path>".format(sys.argv[0]))
+	if len(sys.argv) != 3:
+		print("Correct Usage: {0} <config_file_path> <shard_i>".format(sys.argv[0]))
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
-	sh = Shard(config)
+	shard_i = sys.argv[2]
+	sh = Shard(config, shard_i)
+
+	server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	server_sock.bind((config['shards'][shard_i], config['shards'][shard_i]))
+	server_sock.listen(5)
+	while True:
+		(client_sock, addr) = server_sock.accept()
+		req = messaging.parse(client_sock.recv(2048), addr)
+		if req['msg_type'] == MSG.GET_VOTE:
+			pass

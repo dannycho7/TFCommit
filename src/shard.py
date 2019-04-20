@@ -15,8 +15,8 @@ class Shard:
 		self.vote_decisions = []
 	def broadcast(self, msg):
 		messaging.broadcast(msg, self.global_conf['servers'][:shard_i] + self.global_conf['servers'][shard_i+1:])
-	def recvEndTransaction(self, mu):
-		self.current_transaction = self.bch.createBlock(1, RWSet(), [])
+	def recvEndTransaction(self, req, txn_id, ts, rwset):
+		self.current_transaction = self.bch.createBlock(txn_id, rwset, [])
 		self.broadcast(create_get_vote_msg(self.current_transaction))
 	def recvGetVote(self, vote_req):
 		"""

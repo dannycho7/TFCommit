@@ -26,7 +26,7 @@ def create_msg(msg_type, ip_addr, port, body):
 	}
 	return str(msg).encode('utf-8')
 
-def create_get_vote_msg(transaction):
+def create_get_vote_msg(b_i):
 	pass
 
 def create_vote_msg(decision, VO_i, root):

@@ -14,11 +14,9 @@ class Shard:
 		self.mht = mht
 		self.current_transaction = None
 		self.vote_decisions = []
-	def broadcast(self, msg):
-		messaging.broadcast(msg, self.global_conf['servers'][:shard_i] + self.global_conf['servers'][shard_i+1:])
 	def recvEndTransaction(self, req, txn_id, ts, rwset):
 		self.current_transaction = self.bch.createBlock(txn_id, rwset, [])
-		self.broadcast(create_get_vote_msg(self.current_transaction))
+		messaging.broadcast(create_get_vote_msg(self.current_transaction), self.global_conf['servers'])
 	def recvGetVote(self, req, b_i):
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		# TODO: modify modded_mht based on rw-set in b_i

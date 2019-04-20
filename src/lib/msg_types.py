@@ -1,8 +1,10 @@
 from enum import Enum
 
 class MSG(Enum):
+	END_TRANSACTION = 0
 	GET_VOTE = 1
 	VOTE = 2
+	PREPARE = 3
 
 """
 All messages will be sent as a utf-8 encoded json object and will have the following format:

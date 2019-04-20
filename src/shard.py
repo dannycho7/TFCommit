@@ -58,5 +58,11 @@ if __name__ == "__main__":
 	while True:
 		(client_sock, addr) = server_sock.accept()
 		req = messaging.parse(client_sock.recv(2048), addr)
-		if req['msg_type'] == MSG.GET_VOTE:
+		if req['msg_type'] == MSG.END_TRANSACTION:
+			pass
+		elif req['msg_type'] == MSG.GET_VOTE:
+			pass
+		elif req['msg_type'] == MSG.VOTE:
+			pass
+		elif req['msg_type'] == MSG.PREPARE:
 			pass

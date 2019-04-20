@@ -33,12 +33,10 @@ class Shard:
 				else:
 					final_decision = 'abort'
 			messaging.broadcast(create_prepare_msg(final_decision, self.current_transaction), self.global_conf['servers'])
-	def recvPrepare(self, decision, ch, b_i):
-		"""
-		check if decision is abort
-		send Ack to coordinator with response
-		"""
-		pass
+	def recvPrepare(self, req, decision, ch, b_i):
+		if decision == 'commit':
+			self.bch.appendBlock(b_i)
+		# send ack to coordinator with schnorr response
 	def recvAck(self, res):
 		"""
 		aggregate all schnorr-responses to form collective signature

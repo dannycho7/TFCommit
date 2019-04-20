@@ -31,3 +31,7 @@ def create_get_vote_msg(b_i):
 
 def create_vote_msg(decision, VO_i, root):
 	pass
+
+
+def create_prepare_msg(final_decision, b_i):
+	pass

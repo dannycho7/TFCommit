@@ -21,25 +21,18 @@ class Shard:
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		# TODO: modify modded_mht based on rw-set in b_i
 		ip_addr, port = req['addr']
-		messaging.send(ip_addr, port, create_vote_msg(decision, VO_i, self.mht.getRoot()))
-	def recvVote(self, vote):
-		"""
-		add to voted store
-		check if all involved shards voted
-			final_decision <- commit
-			corrupted_shards <- {}
-			for each shard S_j do
-				fetch the last known root last_roots[S_j]
-				if root_{i-1} =/= last_roots[S_j] then
-					final_decision <- abort
-					append S_j to corrupted shards
-				else if decision = abort then
-					final_decision <- abort
-			if final_decision = commit then
-				update last_roots[S_j] for each shard S_j
-			send signed(decision(T_i, final_decision)) to all shards
-		"""
-		pass
+		messaging.send(ip_addr, port, create_vote_msg('commit', VO_i, modded_mht.getRoot()))
+		# TODO: free modded_mht?
+	def recvVote(self, req, vote):
+		self.vote_decisions.append(vote)
+		if len(self.vote_decisions) == len(self.global_conf['servers']):
+			final_decision = 'commit'
+			for vote_decision in self.vote_decisions:
+				if vote_decision['decision'] == 'commit':
+					self.current_transaction.signed_roots.append(vote_decision['root'])
+				else:
+					final_decision = 'abort'
+			messaging.broadcast(create_prepare_msg(final_decision, self.current_transaction), self.global_conf['servers'])
 	def recvPrepare(self, decision, ch, b_i):
 		"""
 		check if decision is abort

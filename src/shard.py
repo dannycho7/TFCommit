@@ -8,9 +8,10 @@ import lib.messaging as messaging
 import lib.msg_types as msg_types
 
 class Shard:
-	def __init__(self, global_conf, shard_i, bch = Blockchain()):
+	def __init__(self, global_conf, shard_i, mht, bch = Blockchain()):
 		self.global_conf = global_conf
 		self.bch = bch
+		self.mht = mht
 		self.current_transaction = None
 		self.vote_decisions = []
 	def broadcast(self, msg):
@@ -18,16 +19,11 @@ class Shard:
 	def recvEndTransaction(self, req, txn_id, ts, rwset):
 		self.current_transaction = self.bch.createBlock(txn_id, rwset, [])
 		self.broadcast(create_get_vote_msg(self.current_transaction))
-	def recvGetVote(self, vote_req):
-		"""
-		if message contains valid signature then
-			decide to commit or abort T_i
-			VO_i <- null
-			if decision = commit then
-				construct VO_i for the tuples accessed in T_i
-			send(signed(vote(decision, VO_i, root_{i-1}))) to vote requester (Coordinator)
-		"""
-		pass
+	def recvGetVote(self, req, b_i):
+		modded_mht = MerkleTree.copyCreate(self.mht)
+		# TODO: modify modded_mht based on rw-set in b_i
+		ip_addr, port = req['addr']
+		messaging.send(ip_addr, port, create_vote_msg(decision, VO_i, self.mht.getRoot()))
 	def recvVote(self, vote):
 		"""
 		add to voted store

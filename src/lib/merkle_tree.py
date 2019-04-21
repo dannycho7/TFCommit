@@ -17,6 +17,8 @@ mht_so.mht_get_vo.restype = VO_C
 
 class MerkleTree:
 	def __init__(self, raw_data: List[bytes]):
+		if len(raw_data) == 0 or len(raw_data) % 2 == 1:
+			raise ValueError("raw_data must have an even number of entries and be > 0.")
 		self.raw_data = raw_data
 		data = (c_char_p * len(raw_data))(*raw_data)
 		self.mht_obj = mht_so.mht_create(data, len(data))

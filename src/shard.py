@@ -52,7 +52,7 @@ if __name__ == "__main__":
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
-	mht = MerkleTree([b'val1', b'val2'])
+	mht = MerkleTree([b'k1', b'v1'])
 	sh = Shard(config, shard_i, mht)
 
 	shard_config = config['shards'][shard_i]

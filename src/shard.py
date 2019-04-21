@@ -1,11 +1,13 @@
 #! /usr/bin/env python3
 
-import ast
 import json
 import socket
-from lib.blockchain import *
-import lib.messaging as messaging
-import lib.msg_types as msg_types
+import sys
+sys.path.insert(0, './lib')
+from blockchain import *
+from merkle_tree import MerkleTree, VO_C
+import messaging
+from msg_types import MSG, create_get_vote_msg, create_vote_msg, create_prepare_msg
 
 class Shard:
 	def __init__(self, global_conf, shard_i, mht, bch = Blockchain()):
@@ -21,7 +23,7 @@ class Shard:
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		# TODO: modify modded_mht based on rw-set in b_i
 		ip_addr, port = req['addr']
-		messaging.send(ip_addr, port, create_vote_msg('commit', VO_i, modded_mht.getRoot()))
+		messaging.send(create_vote_msg('commit', VO_i, modded_mht.getRoot()), ip_addr, port)
 		# TODO: free modded_mht?
 	def recvVote(self, req, vote):
 		self.vote_decisions.append(vote)
@@ -49,11 +51,14 @@ if __name__ == "__main__":
 		print("Correct Usage: {0} <config_file_path> <shard_i>".format(sys.argv[0]))
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
-	shard_i = sys.argv[2]
-	sh = Shard(config, shard_i)
+	shard_i = int(sys.argv[2])
+	mht = MerkleTree([b'val1', b'val2'])
+	sh = Shard(config, shard_i, mht)
+
+	shard_config = config['shards'][shard_i]
 
 	server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server_sock.bind((config['shards'][shard_i], config['shards'][shard_i]))
+	server_sock.bind((shard_config['ip_addr'], shard_config['port']))
 	server_sock.listen(5)
 	while True:
 		(client_sock, addr) = server_sock.accept()

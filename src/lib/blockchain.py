@@ -22,7 +22,7 @@ class Block:
 
 class Blockchain:
 	def __init__(self):
-		init_block = Block(0, RWSet(), [], '')
+		init_block = Block(0, RWSet(ModSet(), ModSet()), [], '')
 		self.chain = [init_block]
 	def appendBlock(self, block: Block):
 		self.chain.append(block)

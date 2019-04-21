@@ -21,12 +21,15 @@ They will be received, and parsed as:
 }
 """
 
-def create_msg(msg_type, ip_addr, port, body):
+def create_msg(msg_type, body):
 	msg = {
 		'msg_type': msg_type.value,
 		'body': body
 	}
 	return str(msg).encode('utf-8')
+
+def create_end_transaction_msg():
+	return create_msg(MSG.END_TRANSACTION, '')
 
 def create_get_vote_msg(b_i):
 	pass

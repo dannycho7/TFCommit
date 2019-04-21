@@ -21,7 +21,7 @@ class MerkleTree:
 		data = (c_char_p * len(raw_data))(*raw_data)
 		self.mht_obj = mht_so.mht_create(data, len(data))
 	@classmethod
-	def copyCreate(cls, rh_mht: MerkleTree):
+	def copyCreate(cls, rh_mht: 'MerkleTree'):
 		return cls(rh_mht.raw_data)
 	def update(self, k: bytes, v: bytes) -> None:
 		mht_so.mht_update(self.mht_obj, c_char_p(k), c_char_p(v))

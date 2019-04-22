@@ -36,12 +36,12 @@ class Shard:
 			final_decision = 'commit'
 			for vote_decision in self.vote_decisions:
 				if vote_decision['decision'] == 'commit':
-					self.current_transaction.signed_roots.append(vote_decision['root'])
+					self.current_transaction.roots.append(vote_decision['root'])
 				else:
 					final_decision = 'abort'
 			msg = self.msg_mgr.create_prepare_msg(final_decision, self.current_transaction)
 			messaging.broadcast(msg, self.global_config['shards'])
-	def recvPrepare(self, req, decision, ch, b_i):
+	def recvPrepare(self, req, decision, b_i):
 		if decision == 'commit':
 			self.bch.appendBlock(b_i)
 		# send ack to coordinator with schnorr response
@@ -80,5 +80,6 @@ if __name__ == "__main__":
 			sh.recvGetVote(req, block, body['updates'])
 		elif req['msg_type'] == MSG.VOTE:
 			print("Recv vote {0}".format(req))
+			sh.recvVote(req, body)
 		elif req['msg_type'] == MSG.PREPARE:
-			pass
+			print("Recv prepare {0}".format(req))

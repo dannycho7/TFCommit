@@ -52,8 +52,13 @@ class MessageManager:
 		return self.create_msg(MSG.GET_VOTE, get_vote_body)
 
 	def create_vote_msg(self, decision, root):
-		return self.create_msg(MSG.VOTE, '')
+		vote_body = {
+			'decision': decision,
+			'root': root
+		}
+		
+		return self.create_msg(MSG.VOTE, vote_body)
 
 
 	def create_prepare_msg(self, final_decision, b_i):
-		pass
+		return self.create_msg(MSG.PREPARE, '')

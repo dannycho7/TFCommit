@@ -22,29 +22,38 @@ They will be received, and parsed as:
 }
 """
 
-def create_msg(msg_type, body):
-	msg = {
-		'msg_type': msg_type.value,
-		'body': body
-	}
-	return str(msg).encode('utf-8')
+class MessageManager:
+	def __init__(self, addr):
+			self.addr = addr
+	def create_msg(self, msg_type, body):
+		msg = {
+			'msg_type': msg_type.value,
+			'addr': self.addr,
+			'body': body
+		}
+		return str(msg).encode('utf-8')
 
-def create_end_transaction_msg(txn_id, ts, rwset, updates):
-	end_txn_body = {
-		'txn_id': txn_id,
-		'ts': ts,
-		'rw_set': pickle.dumps(rwset),
-		'updates': updates
-	}
-	
-	return create_msg(MSG.END_TRANSACTION, end_txn_body)
+	def create_end_transaction_msg(self, txn_id, ts, rwset, updates):
+		end_txn_body = {
+			'txn_id': txn_id,
+			'ts': ts,
+			'rw_set': pickle.dumps(rwset),
+			'updates': updates
+		}
 
-def create_get_vote_msg(b_i):
-	return create_msg(MSG.GET_VOTE, '')
+		return self.create_msg(MSG.END_TRANSACTION, end_txn_body)
 
-def create_vote_msg(decision, VO_i, root):
-	pass
+	def create_get_vote_msg(self, block, updates):
+		get_vote_body = {
+			'block': pickle.dumps(block),
+			'updates': updates
+		}
+		
+		return self.create_msg(MSG.GET_VOTE, get_vote_body)
+
+	def create_vote_msg(self, decision, root):
+		return self.create_msg(MSG.VOTE, '')
 
 
-def create_prepare_msg(final_decision, b_i):
-	pass
+	def create_prepare_msg(self, final_decision, b_i):
+		pass

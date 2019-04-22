@@ -1,4 +1,5 @@
 from enum import Enum
+import pickle
 
 class MSG(Enum):
 	END_TRANSACTION = 0
@@ -28,11 +29,18 @@ def create_msg(msg_type, body):
 	}
 	return str(msg).encode('utf-8')
 
-def create_end_transaction_msg():
-	return create_msg(MSG.END_TRANSACTION, '')
+def create_end_transaction_msg(txn_id, ts, rwset, updates):
+	end_txn_body = {
+		'txn_id': txn_id,
+		'ts': ts,
+		'rw_set': pickle.dumps(rwset),
+		'updates': updates
+	}
+	
+	return create_msg(MSG.END_TRANSACTION, end_txn_body)
 
 def create_get_vote_msg(b_i):
-	pass
+	return create_msg(MSG.GET_VOTE, '')
 
 def create_vote_msg(decision, VO_i, root):
 	pass

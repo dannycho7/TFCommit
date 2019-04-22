@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import json
+import pickle
 import socket
 import sys
 sys.path.insert(0, './lib')
@@ -16,9 +17,9 @@ class Shard:
 		self.mht = mht
 		self.current_transaction = None
 		self.vote_decisions = []
-	def recvEndTransaction(self, req, txn_id, ts, rwset):
-		self.current_transaction = self.bch.createBlock(txn_id, rwset, [])
-		messaging.broadcast(create_get_vote_msg(self.current_transaction), self.global_conf['servers'])
+	def recvEndTransaction(self, req, txn_id, ts, rw_set, updates):
+		self.current_transaction = self.bch.createBlock(txn_id, rw_set, [])
+		messaging.broadcast(create_get_vote_msg(self.current_transaction), self.global_conf['shards'])
 	def recvGetVote(self, req, b_i):
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		# TODO: modify modded_mht based on rw-set in b_i
@@ -27,14 +28,14 @@ class Shard:
 		# TODO: free modded_mht?
 	def recvVote(self, req, vote):
 		self.vote_decisions.append(vote)
-		if len(self.vote_decisions) == len(self.global_conf['servers']):
+		if len(self.vote_decisions) == len(self.global_conf['shards']):
 			final_decision = 'commit'
 			for vote_decision in self.vote_decisions:
 				if vote_decision['decision'] == 'commit':
 					self.current_transaction.signed_roots.append(vote_decision['root'])
 				else:
 					final_decision = 'abort'
-			messaging.broadcast(create_prepare_msg(final_decision, self.current_transaction), self.global_conf['servers'])
+			messaging.broadcast(create_prepare_msg(final_decision, self.current_transaction), self.global_conf['shards'])
 	def recvPrepare(self, req, decision, ch, b_i):
 		if decision == 'commit':
 			self.bch.appendBlock(b_i)
@@ -63,10 +64,13 @@ if __name__ == "__main__":
 	while True:
 		(client_sock, addr) = server_sock.accept()
 		req = messaging.parse(client_sock.recv(2048), addr)
+		body = req['body']
 		if req['msg_type'] == MSG.END_TRANSACTION:
 			print("Recv end_transaction {0}".format(req))
+			rw_set = pickle.loads(body['rw_set'])
+			sh.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set, body['updates'])
 		elif req['msg_type'] == MSG.GET_VOTE:
-			pass
+			print("Recv get_vote {0}".format(req))
 		elif req['msg_type'] == MSG.VOTE:
 			pass
 		elif req['msg_type'] == MSG.PREPARE:

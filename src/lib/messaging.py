@@ -18,8 +18,9 @@ def send(msg, ip_addr, port):
 
 def broadcast(msg, recipients):
 	send_threads = []
-	for ip_addr, port in recipients:
-		t = threading.Thread(target=send, args=(msg, ip_addr, port))
+	for recipient in recipients:
+		t = threading.Thread(target=send, args=(msg, recipient['ip_addr'], recipient['port']))
 		send_threads.append(t)
+		t.start()
 	for t in send_threads:
 		t.join()

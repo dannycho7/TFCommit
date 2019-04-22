@@ -1,15 +1,23 @@
 from typing import List
 
 class ModSet(list):
-	def __str__(self):
-		return ''.join(map(str, self))
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		for item in self:
+			if len(item) != 2:
+				raise ValueError('Expected 2-tuple list.')
 
 class RWSet:
 	def __init__(self, read_set: ModSet, write_set: ModSet):
 		self.read_set = read_set
 		self.write_set = write_set
 	def __hash__(self):
-		return hash(str(self.read_set) + str(self.write_set))
+		return hash(str(self))
+	def __str__(self):
+		return str({
+			'read_set': self.read_set,
+			'write_set': self.write_set
+		})
 
 class Block:
 	def __init__(self, txn_id: int, rw_set: RWSet, signed_roots: List[str], prev_block_hash: str):
@@ -18,7 +26,14 @@ class Block:
 		self.signed_roots = signed_roots
 		self.prev_block_hash = prev_block_hash
 	def __hash__(self):
-		return hash(str(self.txn_id) + str(RWSet) + ''.join(signed_roots) + prev_block_hash)
+		return hash(str(self))
+	def __str__(self):
+		return str({
+			'txn_id': self.txn_id,
+			'rw_set': str(self.rw_set),
+			'signed_roots': self.signed_roots,
+			'prev_block_hash': self.prev_block_hash
+		})
 
 class Blockchain:
 	def __init__(self):

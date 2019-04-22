@@ -23,7 +23,7 @@ class Shard:
 		self.current_transaction = self.bch.createBlock(txn_id, rw_set, [])
 		msg = self.msg_mgr.create_get_vote_msg(self.current_transaction, updates)
 		messaging.broadcast(msg, self.global_config['shards'])
-	def recvGetVote(self, req, b_i, updates):
+	def recvGetVote(self, req, block, updates):
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:
 			modded_mht.update(k, new_v)
@@ -41,14 +41,14 @@ class Shard:
 					final_decision = 'abort'
 			msg = self.msg_mgr.create_prepare_msg(final_decision, self.current_transaction)
 			messaging.broadcast(msg, self.global_config['shards'])
-	def recvPrepare(self, req, decision, b_i):
-		if decision == 'commit':
-			self.bch.appendBlock(b_i)
+	def recvPrepare(self, req, final_decision, block):
+		if final_decision == 'commit':
+			self.bch.appendBlock(block)
 		# send ack to coordinator with schnorr response
 	def recvAck(self, res):
 		"""
 		aggregate all schnorr-responses to form collective signature
-		send b_i and multisig to client and cohorts.
+		send block and multisig to client and cohorts.
 		"""
 		pass
 
@@ -83,3 +83,5 @@ if __name__ == "__main__":
 			sh.recvVote(req, body)
 		elif req['msg_type'] == MSG.PREPARE:
 			print("Recv prepare {0}".format(req))
+			block = pickle.loads(body['block'])
+			sh.recvPrepare(req, body['final_decision'], block)

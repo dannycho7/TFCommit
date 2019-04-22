@@ -60,5 +60,10 @@ class MessageManager:
 		return self.create_msg(MSG.VOTE, vote_body)
 
 
-	def create_prepare_msg(self, final_decision, b_i):
-		return self.create_msg(MSG.PREPARE, '')
+	def create_prepare_msg(self, final_decision, block):
+		prepare_body = {
+			'final_decision': final_decision,
+			'block': pickle.dumps(block)
+		}
+		
+		return self.create_msg(MSG.PREPARE, prepare_body)

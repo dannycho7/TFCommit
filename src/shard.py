@@ -25,7 +25,8 @@ class Shard:
 		messaging.broadcast(msg, self.global_config['shards'])
 	def recvGetVote(self, req, b_i, updates):
 		modded_mht = MerkleTree.copyCreate(self.mht)
-		# TODO: modify modded_mht based on rw-set in b_i
+		for k, new_v in updates:
+			modded_mht.update(k, new_v)
 		msg = self.msg_mgr.create_vote_msg('commit', modded_mht.getRoot())
 		messaging.send(msg, req['addr'])
 		# TODO: free modded_mht?

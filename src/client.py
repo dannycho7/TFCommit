@@ -13,8 +13,8 @@ if len(sys.argv) != 2:
 config = json.load(open(sys.argv[1]))
 client_config = config['client']
 shard_config = config['shards'][0]
-rw_set = RWSet([], ['k1', hash('v2')])
-updates = [('k1', 'v2')]
+rw_set = RWSet([], [b'k1', hash(b'v2')])
+updates = [(b'k1', b'v2')]
 
 msg_mgr = MessageManager((client_config['ip_addr'], client_config['port']))
 messaging.send(msg_mgr.create_end_transaction_msg(1, 1, rw_set, updates), (shard_config['ip_addr'], shard_config['port']))

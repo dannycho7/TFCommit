@@ -61,6 +61,9 @@ class Messenger:
 			sock.connect(addr)
 			self.socket_map[addr] = sock
 		msg_nbytes = len(msg).to_bytes(MESSAGE_SIZE_HEADER_NBYTES, byteorder=sys.byteorder)
-		written_nbytes = self.socket_map[addr].send(msg_nbytes + msg)
+		written_nbytes = 0
+		msg_full = msg_nbytes + msg
+		while written_nbytes < len(msg_full):
+			written_nbytes += self.socket_map[addr].send(msg_full[written_nbytes:])
 		self.lock.release()
 		return written_nbytes

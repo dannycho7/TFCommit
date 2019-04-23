@@ -4,7 +4,7 @@ import json
 import sys
 sys.path.insert(0, './lib')
 from blockchain import RWSet
-import messaging
+from messenger import Messenger
 from msg_types import MessageManager
 
 if len(sys.argv) != 2:
@@ -17,4 +17,4 @@ rw_set = RWSet([], [b'k1', hash(b'v2')])
 updates = [(b'k1', b'v2')]
 
 msg_mgr = MessageManager((client_config['ip_addr'], client_config['port']))
-messaging.send(msg_mgr.create_end_transaction_msg(1, 1, rw_set, updates), (shard_config['ip_addr'], shard_config['port']))
+Messenger.get().send(msg_mgr.create_end_transaction_msg(1, 1, rw_set, updates), (shard_config['ip_addr'], shard_config['port']))

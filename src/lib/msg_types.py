@@ -6,6 +6,8 @@ class MSG(Enum):
 	GET_VOTE = 1
 	VOTE = 2
 	PREPARE = 3
+	ACK = 4
+	DECISION = 5
 
 """
 All messages will be sent as a utf-8 encoded json object and will have the following format:
@@ -51,19 +53,35 @@ class MessageManager:
 		
 		return self.create_msg(MSG.GET_VOTE, get_vote_body)
 
-	def create_vote_msg(self, decision, root):
+	def create_vote_msg(self, decision, root, sch_commitment):
 		vote_body = {
 			'decision': decision,
-			'root': root
+			'root': root,
+			'sch_commitment': str(sch_commitment)
 		}
 		
 		return self.create_msg(MSG.VOTE, vote_body)
 
 
-	def create_prepare_msg(self, final_decision, block):
+	def create_prepare_msg(self, final_decision, block, challenge):
 		prepare_body = {
 			'final_decision': final_decision,
-			'block': pickle.dumps(block)
+			'block': pickle.dumps(block),
+			'ch': challenge
 		}
 		
 		return self.create_msg(MSG.PREPARE, prepare_body)
+
+	def create_ack_msg(self, sch_response):
+		ack_body = {
+			'sch_response': sch_response
+		}
+		
+		return self.create_msg(MSG.ACK, ack_body)
+
+	def create_decision_msg(self, block):
+		decision_body = {
+			'block': pickle.dumps(block)
+		}
+
+		return self.create_msg(MSG.DECISION, decision_body)

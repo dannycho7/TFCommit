@@ -25,6 +25,7 @@ class Block:
 		self.rw_set = rw_set
 		self.roots = roots
 		self.prev_block_hash = prev_block_hash
+		self.cosign = ()
 	def __hash__(self):
 		return hash(str(self))
 	def __str__(self):
@@ -32,7 +33,8 @@ class Block:
 			'txn_id': self.txn_id,
 			'rw_set': str(self.rw_set),
 			'roots': self.roots,
-			'prev_block_hash': self.prev_block_hash
+			'prev_block_hash': self.prev_block_hash,
+			'cosign': self.cosign
 		})
 
 class Blockchain:

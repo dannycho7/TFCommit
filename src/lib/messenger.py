@@ -4,7 +4,7 @@ import socket
 import sys
 import threading
 
-MIN_RECV_NBYTES = 2048
+MAX_RECV_NBYTES = 2048
 MESSAGE_SIZE_HEADER_NBYTES = 4
 
 class Messenger:
@@ -39,7 +39,7 @@ class Messenger:
 		msg_nbytes = int.from_bytes(msg_nbytes_s, byteorder=sys.byteorder)
 		buf = b''
 		while len(buf) != msg_nbytes:
-			buf += sock.recv(min(MIN_RECV_NBYTES, msg_nbytes - len(buf)))
+			buf += sock.recv(min(MAX_RECV_NBYTES, msg_nbytes - len(buf)))
 		return cls.parse(buf)
 
 	def broadcast(self, msg, recipients):

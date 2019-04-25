@@ -42,7 +42,6 @@ class MessageManager:
 			'rw_set': pickle.dumps(rwset),
 			'updates': updates
 		}
-
 		return self.create_msg(MSG.END_TRANSACTION, end_txn_body)
 
 	def create_get_vote_msg(self, block, updates):
@@ -50,7 +49,6 @@ class MessageManager:
 			'block': pickle.dumps(block),
 			'updates': updates
 		}
-		
 		return self.create_msg(MSG.GET_VOTE, get_vote_body)
 
 	def create_vote_msg(self, decision, root, sch_commitment):
@@ -59,9 +57,7 @@ class MessageManager:
 			'root': root,
 			'sch_commitment': str(sch_commitment)
 		}
-		
 		return self.create_msg(MSG.VOTE, vote_body)
-
 
 	def create_prepare_msg(self, final_decision, block, challenge):
 		prepare_body = {
@@ -69,19 +65,27 @@ class MessageManager:
 			'block': pickle.dumps(block),
 			'ch': challenge
 		}
-		
 		return self.create_msg(MSG.PREPARE, prepare_body)
 
 	def create_ack_msg(self, sch_response):
 		ack_body = {
 			'sch_response': sch_response
 		}
-		
 		return self.create_msg(MSG.ACK, ack_body)
 
-	def create_decision_msg(self, block):
+	def create_decision_msg(self, final_decision, block):
 		decision_body = {
+			'final_decision': final_decision,
 			'block': pickle.dumps(block)
 		}
-
 		return self.create_msg(MSG.DECISION, decision_body)
+
+class TwoPCMessageManager(MessageManager):
+
+	def create_vote_msg(self, decision):
+		vote_body = {
+			'decision': decision
+		}
+		return self.create_msg(MSG.VOTE, vote_body)
+
+	

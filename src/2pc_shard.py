@@ -35,7 +35,7 @@ class Shard:
         Messenger.get().broadcast(msg, self.global_config['shards'])
 
     def recvGetVote(self, req, block, updates):
-        if not self.current_execution or (not self.current_execution.txn_id != block.txn_id):
+        if not self.current_execution or self.current_execution.txn_id != block.txn_id:
             self.current_execution = CurrentExecution(block.txn_id)
         self.current_execution.updates = updates
         msg = self.msg_mgr.create_vote_msg('commit')

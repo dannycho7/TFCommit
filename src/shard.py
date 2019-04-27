@@ -39,7 +39,7 @@ class Shard:
 		Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvGetVote(self, req, block, updates):
-		if not self.current_execution or (not self.current_execution.txn_id != block.txn_id):
+		if not self.current_execution or self.current_execution.txn_id != block.txn_id:
 			self.current_execution = CurrentExecution(block.txn_id)
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:

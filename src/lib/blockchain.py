@@ -20,8 +20,8 @@ class RWSet:
 		})
 
 class Block:
-	def __init__(self, txn_id: int, rw_set: RWSet, roots: List[str], prev_block_hash: str):
-		self.txn_id = txn_id
+	def __init__(self, bid: int, rw_set: RWSet, roots: List[str], prev_block_hash: str):
+		self.bid = bid
 		self.rw_set = rw_set
 		self.roots = roots
 		self.prev_block_hash = prev_block_hash
@@ -30,7 +30,7 @@ class Block:
 		return hash(str(self))
 	def __str__(self):
 		return str({
-			'txn_id': self.txn_id,
+			'bid': self.bid,
 			'rw_set': str(self.rw_set),
 			'roots': self.roots,
 			'prev_block_hash': self.prev_block_hash,
@@ -43,6 +43,6 @@ class Blockchain:
 		self.chain = [init_block]
 	def appendBlock(self, block: Block):
 		self.chain.append(block)
-	def createBlock(self, txn_id, rw_set, roots) -> Block:
+	def createBlock(self, bid, rw_set, roots) -> Block:
 		prev_block_hash = hash(self.chain[-1])
-		return Block(txn_id, rw_set, roots, prev_block_hash)
+		return Block(bid, rw_set, roots, prev_block_hash)

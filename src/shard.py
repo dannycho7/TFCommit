@@ -13,8 +13,8 @@ from msg_types import MSG, MessageManager
 from cosi import *
 
 class CurrentExecution:
-	def __init__(self, txn_id):
-		self.txn_id = txn_id
+	def __init__(self, bid):
+		self.bid = bid
 		self.vote_decisions = []
 		self.ack_resps = []
 		self.sch_challenge = None
@@ -33,14 +33,14 @@ class Shard:
 		self.msg_mgr = MessageManager((shard_config['ip_addr'], shard_config['port']))
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set, updates):
-		self.current_transaction = self.bch.createBlock(txn_id, rw_set, [])
-		self.current_execution = CurrentExecution(txn_id)
+		self.current_transaction = self.bch.createBlock(ts, rw_set, [])
+		self.current_execution = CurrentExecution(ts)
 		msg = self.msg_mgr.create_get_vote_msg(self.current_transaction, updates)
 		Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvGetVote(self, req, block, updates):
-		if not self.current_execution or self.current_execution.txn_id != block.txn_id:
-			self.current_execution = CurrentExecution(block.txn_id)
+		if not self.current_execution or self.current_execution.bid != block.bid:
+			self.current_execution = CurrentExecution(block.bid)
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:
 			modded_mht.update(k, new_v)

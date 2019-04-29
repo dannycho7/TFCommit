@@ -11,19 +11,26 @@ class RWSet:
 	def __init__(self, read_set: ModSet, write_set: ModSet):
 		self.read_set = read_set
 		self.write_set = write_set
-	def __hash__(self):
-		return hash(str(self))
 	def __str__(self):
 		return str({
 			'read_set': self.read_set,
 			'write_set': self.write_set
 		})
 
-class Block:
-	def __init__(self, bid: int, rw_set: RWSet, roots: List[str], prev_block_hash: str):
-		self.bid = bid
+class Transaction:
+	def __init__(self, rw_set: RWSet, roots: List[str]):
 		self.rw_set = rw_set
 		self.roots = roots
+	def __str__(self):
+		return str({
+			'rw_set': str(self.rw_set),
+			'roots': self.roots
+		})
+
+class Block:
+	def __init__(self, bid: int, txns: List[Transaction], prev_block_hash: str):
+		self.bid = bid
+		self.txns = txns
 		self.prev_block_hash = prev_block_hash
 		self.cosign = ()
 	def __hash__(self):
@@ -31,18 +38,17 @@ class Block:
 	def __str__(self):
 		return str({
 			'bid': self.bid,
-			'rw_set': str(self.rw_set),
-			'roots': self.roots,
+			'txns': str(self.txns),
 			'prev_block_hash': self.prev_block_hash,
 			'cosign': self.cosign
 		})
 
 class Blockchain:
 	def __init__(self):
-		init_block = Block(0, RWSet(ModSet(), ModSet()), [], '')
+		init_block = Block(0, [], '')
 		self.chain = [init_block]
 	def appendBlock(self, block: Block):
 		self.chain.append(block)
-	def createBlock(self, bid, rw_set, roots) -> Block:
+	def createBlock(self, bid, txns) -> Block:
 		prev_block_hash = hash(self.chain[-1])
-		return Block(bid, rw_set, roots, prev_block_hash)
+		return Block(bid, txns, prev_block_hash)

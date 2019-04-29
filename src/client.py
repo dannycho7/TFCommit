@@ -19,10 +19,10 @@ class Client:
         self.cntr = 0
 
     def performTransaction(self):
-        rw_set = RWSet([], [b'k1', hash(b'v2')])
+        rw_set_list = [RWSet([], [b'k1', hash(b'v2')])]
         updates = [(b'k1', b'v2')]
 
-        msg = self.msg_mgr.create_end_transaction_msg(1, 1, rw_set, updates)
+        msg = self.msg_mgr.create_end_transaction_msg(1, 1, rw_set_list, updates)
         Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
 
     def recvDecision(self, final_decision):

@@ -35,11 +35,11 @@ class MessageManager:
 		}
 		return str(msg).encode('utf-8')
 
-	def create_end_transaction_msg(self, txn_id, ts, rwset, updates):
+	def create_end_transaction_msg(self, txn_id, ts, rw_set_list, updates):
 		end_txn_body = {
 			'txn_id': txn_id,
 			'ts': ts,
-			'rw_set': pickle.dumps(rwset),
+			'rw_set_list': pickle.dumps(rw_set_list),
 			'updates': updates
 		}
 		return self.create_msg(MSG.END_TRANSACTION, end_txn_body)

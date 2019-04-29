@@ -27,8 +27,9 @@ class Shard:
         shard_config = self.global_config['shards'][shard_i]
         self.msg_mgr = TwoPCMessageManager((shard_config['ip_addr'], shard_config['port']))
 
-    def recvEndTransaction(self, req, txn_id, ts, rw_set, updates):
-        self.current_transaction = self.bch.createBlock(ts, rw_set, [])
+    def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
+        txns = [Transaction(rw_set, []) for rw_set in rw_set_list]
+        self.current_transaction = self.bch.createBlock(ts, txns)
         self.current_execution = CurrentExecution(ts)
         msg = self.msg_mgr.create_get_vote_msg(self.current_transaction, updates)
         Messenger.get().broadcast(msg, self.global_config['shards'])
@@ -67,8 +68,8 @@ def handleConnection(sh, client_sock):
         body = req['body']
         sh.lock.acquire()
         if req['msg_type'] == MSG.END_TRANSACTION:
-            rw_set = pickle.loads(body['rw_set'])
-            sh.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set, body['updates'])
+            rw_set_list = pickle.loads(body['rw_set_list'])
+            sh.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
         elif req['msg_type'] == MSG.GET_VOTE:
             block = pickle.loads(body['block'])
             sh.recvGetVote(req, block, body['updates'])

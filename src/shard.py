@@ -24,7 +24,7 @@ class Shard:
 	def __init__(self, global_config, shard_i, mht, bch = Blockchain()):
 		self.global_config = global_config
 		self.bch = bch
-		self.current_transaction = None
+		self.pending_block = None
 		self.current_execution = None
 		self.cosi = CoSi()
 		self.lock = threading.Lock()
@@ -33,10 +33,10 @@ class Shard:
 		self.msg_mgr = MessageManager((shard_config['ip_addr'], shard_config['port']))
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
-		txns = [Transaction(rw_set, []) for rw_set in rw_set_list]
-		self.current_transaction = self.bch.createBlock(ts, txns)
+		txns = [Transaction(rw_set) for rw_set in rw_set_list]
+		self.pending_block = self.bch.createBlock(ts, txns, [])
 		self.current_execution = CurrentExecution(ts)
-		msg = self.msg_mgr.create_get_vote_msg(self.current_transaction, updates)
+		msg = self.msg_mgr.create_get_vote_msg(self.pending_block, updates)
 		Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvGetVote(self, req, block, updates):
@@ -57,14 +57,14 @@ class Shard:
 			sch_commits = []
 			for vote_decision in self.current_execution.vote_decisions:
 				if vote_decision['decision'] == 'commit':
-					self.current_transaction.roots.append(vote_decision['root'])
+					self.pending_block.roots.append(vote_decision['root'])
 					sch_commits.append(vote_decision['sch_commitment'])
 				else:
 					final_decision = 'abort'
 			self.current_execution.final_decision = final_decision
-			sch_challenge = self.cosi.challenge(str(self.current_transaction), sch_commits)
+			sch_challenge = self.cosi.challenge(str(self.pending_block), sch_commits)
 			self.current_execution.sch_challenge = sch_challenge
-			msg = self.msg_mgr.create_prepare_msg(final_decision, self.current_transaction, sch_challenge)
+			msg = self.msg_mgr.create_prepare_msg(final_decision, self.pending_block, sch_challenge)
 			Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvPrepare(self, req, body):
@@ -79,8 +79,8 @@ class Shard:
 		curr_exec.ack_resps.append(res)
 		if len(curr_exec.ack_resps) == len(self.global_config['shards']):
 			aggrR = self.cosi.aggr_response(curr_exec.ack_resps)
-			self.current_transaction.cosign = tuple((curr_exec.sch_challenge, aggrR))
-			msg = self.msg_mgr.create_decision_msg(self.current_execution.final_decision, self.current_transaction)
+			self.pending_block.cosign = tuple((curr_exec.sch_challenge, aggrR))
+			msg = self.msg_mgr.create_decision_msg(self.current_execution.final_decision, self.pending_block)
 			Messenger.get().send(msg, (self.global_config["client"]["ip_addr"], self.global_config["client"]["port"]))
 			Messenger.get().broadcast(msg, self.global_config['shards'])
 

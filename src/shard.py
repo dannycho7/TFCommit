@@ -15,7 +15,7 @@ from cosi import *
 class CurrentExecution:
 	def __init__(self, bid):
 		self.bid = bid
-		self.vote_decisions = []
+		self.vote_list = []
 		self.ack_resps = []
 		self.sch_challenge = None
 		self.final_decision = ''
@@ -23,18 +23,19 @@ class CurrentExecution:
 class Shard:
 	def __init__(self, global_config, shard_i, mht, bch = Blockchain()):
 		self.global_config = global_config
+		self.shard_i = shard_i
+		self.mht = mht
 		self.bch = bch
 		self.pending_block = None
 		self.current_execution = None
 		self.cosi = CoSi()
 		self.lock = threading.Lock()
-		self.mht = mht
-		shard_config = self.global_config['shards'][shard_i]
+		shard_config = self.global_config['shards'][self.shard_i]
 		self.msg_mgr = MessageManager((shard_config['ip_addr'], shard_config['port']))
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
 		txns = [Transaction(rw_set) for rw_set in rw_set_list]
-		self.pending_block = self.bch.createBlock(ts, txns, [])
+		self.pending_block = self.bch.createBlock(ts, txns, {})
 		self.current_execution = CurrentExecution(ts)
 		msg = self.msg_mgr.create_get_vote_msg(self.pending_block, updates)
 		Messenger.get().broadcast(msg, self.global_config['shards'])
@@ -46,19 +47,19 @@ class Shard:
 		for k, new_v in updates:
 			modded_mht.update(k, new_v)
 		sch_commitment = self.cosi.commitment()
-		msg = self.msg_mgr.create_vote_msg('commit', modded_mht.getRoot(), sch_commitment)
+		msg = self.msg_mgr.create_vote_msg(self.shard_i, 'commit', modded_mht.getRoot(), sch_commitment)
 		Messenger.get().send(msg, req['addr'])
 		# TODO: free modded_mht?
 
-	def recvVote(self, vote):
-		self.current_execution.vote_decisions.append(vote)
-		if len(self.current_execution.vote_decisions) == len(self.global_config['shards']):
+	def recvVote(self, v):
+		self.current_execution.vote_list.append(v)
+		if len(self.current_execution.vote_list) == len(self.global_config['shards']):
 			final_decision = 'commit'
 			sch_commits = []
-			for vote_decision in self.current_execution.vote_decisions:
-				if vote_decision['decision'] == 'commit':
-					self.pending_block.roots.append(vote_decision['root'])
-					sch_commits.append(vote_decision['sch_commitment'])
+			for vote in self.current_execution.vote_list:
+				if vote['decision'] == 'commit':
+					self.pending_block.roots[vote['sender_id']] = vote['root']
+					sch_commits.append(vote['sch_commitment'])
 				else:
 					final_decision = 'abort'
 			self.current_execution.final_decision = final_decision

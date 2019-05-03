@@ -29,8 +29,8 @@ class MessageManager:
 			self.addr = addr
 	def create_msg(self, msg_type, body):
 		msg = {
-			'msg_type': msg_type.value,
 			'addr': self.addr,
+			'msg_type': msg_type.value,
 			'body': body
 		}
 		return str(msg).encode('utf-8')
@@ -51,8 +51,9 @@ class MessageManager:
 		}
 		return self.create_msg(MSG.GET_VOTE, get_vote_body)
 
-	def create_vote_msg(self, decision, root, sch_commitment):
+	def create_vote_msg(self, sender_id, decision, root, sch_commitment):
 		vote_body = {
+			'sender_id': sender_id,
 			'decision': decision,
 			'root': root,
 			'sch_commitment': str(sch_commitment)

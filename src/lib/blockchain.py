@@ -1,4 +1,6 @@
-from typing import List
+from typing import Dict, List, TypeVar
+
+Keyable = TypeVar('Keyable', int, str)
 
 class ModSet(list):
 	def __init__(self, *args, **kwargs):
@@ -26,7 +28,7 @@ class Transaction:
 		})
 
 class Block:
-	def __init__(self, bid: int, txns: List[Transaction], roots: List[str], prev_block_hash: str):
+	def __init__(self, bid: int, txns: List[Transaction], roots: Dict[Keyable, str], prev_block_hash: str):
 		self.bid = bid
 		self.txns = txns
 		self.roots = roots
@@ -45,7 +47,7 @@ class Block:
 
 class Blockchain:
 	def __init__(self):
-		init_block = Block(0, [], [], '')
+		init_block = Block(0, [], {}, '')
 		self.chain = [init_block]
 	def appendBlock(self, block: Block):
 		self.chain.append(block)

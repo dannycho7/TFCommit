@@ -11,6 +11,7 @@ from merkle_tree import MerkleTree, VO_C
 from messenger import Messenger
 from msg_types import MSG, MessageManager
 from cosi import *
+from constants import Const
 
 class CurrentExecution:
 	def __init__(self, bid):
@@ -115,13 +116,25 @@ def handleConnection(sh, client_sock):
 			sh.recvDecision(body['final_decision'], body)
 		sh.lock.release()
 
+def createMHT(shard_i):
+	kv = []
+	#TODO: Uncomment next 2 lines when a shard can handle only a subset of data.
+	#strt = shard_i * Const.NUM_ELEMENTS + 1
+	#for i in range(strt, strt+ Const.NUM_ELEMENTS):
+	for i in range(1, Const.NUM_ELEMENTS*Const.NUM_PARTITIONS):
+		key = bytes('k'+str(i), 'utf-8')
+		val = bytes('v'+str(i), 'utf-8')
+		kv.append(key)
+		kv.append(val)
+	return MerkleTree(kv)
+
 if __name__ == "__main__":
 	if len(sys.argv) != 3:
 		print("Correct Usage: {0} <config_file_path> <shard_i>".format(sys.argv[0]))
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
-	mht = MerkleTree([b'k1', b'v1'])
+	mht = createMHT(shard_i)
 	sh = Shard(config, shard_i, mht)
 
 	shard_config = config['shards'][shard_i]

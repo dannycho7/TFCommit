@@ -4,12 +4,21 @@ import json
 import sys
 import socket
 import threading
+import random
+import time
 sys.path.insert(0, './lib')
 from blockchain import RWSet
 from messenger import Messenger
 from msg_types import MessageManager, MSG
+from constants import Const
 
-totalTxns = 10
+class Transaction:
+    def __init__(self, txn_id, ts, updates, rw_set_list):
+        self.id = txn_id
+        self.ts = ts
+        self.updates = updates
+        self.rw_set_list = rw_set_list
+
 class Client:
     def __init__(self, config):
         self.config = config
@@ -18,15 +27,32 @@ class Client:
         self.msg_mgr = MessageManager((client_config['ip_addr'], client_config['port']))
         self.cntr = 0
 
-    def performTransaction(self):
-        rw_set_list = [RWSet([], [b'k1', hash(b'v2')])]
-        updates = [(b'k1', b'v2')]
+    def createTxn(self):
+        txn_id = time.time()
+        ts = time.time()
+        updates = []
+        rw_set_list = []
+        for i in range(Const.NUM_OPS):
+            p_id = random.randint(0, Const.NUM_PARTITIONS-1)
+            if i < Const.NUM_PARTITIONS:
+                p_id = i
+            v = random.randint(0, Const.NUM_ELEMENTS)
+            val = bytes('v' + str(v), 'utf-8')
+            strt = p_id * Const.NUM_ELEMENTS
+            k = random.randint(strt, strt + Const.NUM_ELEMENTS)
+            key = bytes('k' + str(k), 'utf-8')
+            updates.append((key, val))
+            rw_set_list.append(RWSet([], [key, hash(val)]))
+        return Transaction(txn_id, ts, updates, rw_set_list)
 
-        msg = self.msg_mgr.create_end_transaction_msg(1, 1, rw_set_list, updates)
+    def performTransaction(self):
+        txn = self.createTxn()
+        msg = self.msg_mgr.create_end_transaction_msg(txn)
+        print(msg)
         Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
 
     def recvDecision(self, final_decision):
-        if self.cntr < totalTxns:
+        if self.cntr < Const.NUM_TXNS:
             self.cntr += 1
             self.performTransaction()
 

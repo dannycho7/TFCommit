@@ -121,7 +121,7 @@ def createMHT(shard_i):
 	#TODO: Uncomment next 2 lines when a shard can handle only a subset of data.
 	#strt = shard_i * Const.NUM_ELEMENTS + 1
 	#for i in range(strt, strt+ Const.NUM_ELEMENTS):
-	for i in range(1, Const.NUM_ELEMENTS*Const.NUM_PARTITIONS):
+	for i in range(1, Const.NUM_ELEMENTS*Const.NUM_PARTITIONS+1):
 		key = bytes('k'+str(i), 'utf-8')
 		val = bytes('v'+str(i), 'utf-8')
 		kv.append(key)

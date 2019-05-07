@@ -6,6 +6,7 @@ import socket
 import threading
 import random
 import time
+import os
 sys.path.insert(0, './lib')
 from blockchain import RWSet
 from messenger import Messenger
@@ -46,15 +47,29 @@ class Client:
         return Transaction(txn_id, ts, updates, rw_set_list)
 
     def performTransaction(self):
-        txn = self.createTxn()
-        msg = self.msg_mgr.create_end_transaction_msg(txn)
-        print(msg)
-        Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
-
-    def recvDecision(self, final_decision):
         if self.cntr < Const.NUM_TXNS:
             self.cntr += 1
-            self.performTransaction()
+            txn = self.createTxn()
+            msg = self.msg_mgr.create_end_transaction_msg(txn)
+            Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
+        else:
+            self.logResults()
+
+    def recvDecision(self, final_decision):
+        self.performTransaction()
+
+    def logResults(self):
+        timeElapsed = time.time() - globalTime
+        txnRate = Const.NUM_TXNS/timeElapsed
+        msg = str(timeElapsed) + ':' + str(txnRate)
+        msg += str(Const.NUM_PARTITIONS) + '\n'
+        
+        if not os.path.exists('./results'):
+            os.mkdir('results')
+        file_path = './results/results.txt'
+        fd = open(file_path,'a')
+        fd.write(msg)
+        fd.close()
 
 def handleConnection(cl, req_sock):
     while True:
@@ -80,6 +95,7 @@ if __name__ == "__main__":
     client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     client_sock.bind((client_config['ip_addr'], client_config['port']))
     client_sock.listen(5)
+    globalTime = time.time()
     cl.performTransaction()
     while True:
         (req_sock, addr) = client_sock.accept()

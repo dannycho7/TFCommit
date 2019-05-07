@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 from ctypes import *
-from typing import List
+from typing import Dict, List
 
 class VO_C(Structure):
 	_fields_ = [("val", c_char_p), ("sibling_path", POINTER(c_char_p)), ("size", c_int)]
@@ -16,15 +16,14 @@ mht_so.mht_get_vo.argtypes = [c_void_p, c_char_p]
 mht_so.mht_get_vo.restype = VO_C
 
 class MerkleTree:
-	def __init__(self, raw_data: List[bytes]):
-		if len(raw_data) == 0 or len(raw_data) % 2 == 1:
-			raise ValueError("raw_data must have an even number of entries and be > 0.")
-		self.raw_data = raw_data
+	def __init__(self, kv_map: Dict[bytes, bytes]):
+		self.kv_map = kv_map
+		raw_data = [d for k, v in self.kv_map.items() for d in [k, v]]
 		data = (c_char_p * len(raw_data))(*raw_data)
 		self.mht_obj = mht_so.mht_create(data, len(data))
 	@classmethod
 	def copyCreate(cls, rh_mht: 'MerkleTree'):
-		return cls(rh_mht.raw_data)
+		return cls(rh_mht.kv_map)
 	def update(self, k: bytes, v: bytes) -> None:
 		mht_so.mht_update(self.mht_obj, c_char_p(k), c_char_p(v))
 	def getRoot(self) -> bytes:

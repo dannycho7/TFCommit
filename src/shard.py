@@ -47,7 +47,8 @@ class Shard:
 			self.current_execution = CurrentExecution(block.bid)
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:
-			modded_mht.update(k, new_v)
+			if k in modded_mht.kv_map:
+				modded_mht.update(k, new_v)
 		sch_commitment = self.cosi.commitment()
 		msg = self.msg_mgr.create_vote_msg(self.shard_i, 'commit', modded_mht.getRoot(), sch_commitment)
 		Messenger.get().send(msg, req['addr'])
@@ -118,16 +119,9 @@ def handleConnection(sh, client_sock):
 		sh.lock.release()
 
 def createMHT(shard_i):
-	kv = []
-	#TODO: Uncomment next 2 lines when a shard can handle only a subset of data.
-	#strt = shard_i * Const.NUM_ELEMENTS + 1
-	#for i in range(strt, strt+ Const.NUM_ELEMENTS):
-	for i in range(1, Const.NUM_ELEMENTS*Const.NUM_PARTITIONS+1):
-		key = bytes('k'+str(i), 'utf-8')
-		val = bytes('v'+str(i), 'utf-8')
-		kv.append(key)
-		kv.append(val)
-	return MerkleTree(kv)
+	strt = shard_i * Const.NUM_ELEMENTS + 1
+	kv_map = { bytes('k'+str(i), 'utf-8'): bytes('v'+str(i), 'utf-8') for i in range(strt, strt+ Const.NUM_ELEMENTS) }
+	return MerkleTree(kv_map)
 
 if __name__ == "__main__":
 	if len(sys.argv) != 3:

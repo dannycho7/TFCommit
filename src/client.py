@@ -43,7 +43,7 @@ class Client:
             k = random.randint(strt, strt + Const.NUM_ELEMENTS)
             key = bytes('k' + str(k), 'utf-8')
             updates.append((key, val))
-            rw_set_list.append(RWSet([], [key, hash(val)]))
+            rw_set_list.append(RWSet({}, {key: hash(val)}))
         return Transaction(txn_id, ts, updates, rw_set_list)
 
     def performTransaction(self):

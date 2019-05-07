@@ -22,10 +22,11 @@ class CurrentExecution:
 		self.final_decision = ''
 
 class Shard:
-	def __init__(self, global_config, shard_i, mht, bch = Blockchain()):
+	def __init__(self, global_config, shard_i, mht, data_ts, bch = Blockchain()):
 		self.global_config = global_config
 		self.shard_i = shard_i
 		self.mht = mht
+		self.data_ts = data_ts
 		self.bch = bch
 		self.pending_block = None
 		self.current_execution = None
@@ -88,7 +89,7 @@ class Shard:
 
 	def recvDecision(self, final_decision, body):
 		if final_decision == 'commit':
-			#TODO: Update data
+			# TODO: Update data and ts
 			block = pickle.loads(body['block'])
 			self.bch.appendBlock(block)
 
@@ -135,7 +136,8 @@ if __name__ == "__main__":
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
 	mht = createMHT(shard_i)
-	sh = Shard(config, shard_i, mht)
+	data_ts = {b'k1': (0, 0)}
+	sh = Shard(config, shard_i, mht, data_ts)
 
 	shard_config = config['shards'][shard_i]
 

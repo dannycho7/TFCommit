@@ -2,15 +2,25 @@ from typing import Dict, List, TypeVar
 
 Keyable = TypeVar('Keyable', int, str)
 
-class ModSet(list):
+"""
+Format: { key: (hash(value), r_max, w_max }
+"""
+class ReadSet(dict):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		for item in self:
-			if len(item) != 2:
-				raise ValueError('Expected 2-tuple list.')
+		for k, v in self.items():
+			if len(v) != 3:
+				raise ValueError('Expected 3-tuple values.')
+
+"""
+Format: { key: hash(value) }
+"""
+class WriteSet(dict):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 
 class RWSet:
-	def __init__(self, read_set: ModSet, write_set: ModSet):
+	def __init__(self, read_set: ReadSet, write_set: WriteSet):
 		self.read_set = read_set
 		self.write_set = write_set
 	def __str__(self):

@@ -47,13 +47,10 @@ class Client:
         return Transaction(txn_id, ts, updates, rw_set_list)
 
     def performTransaction(self):
-        if self.cntr < Const.NUM_TXNS:
-            self.cntr += 1
-            txn = self.createTxn()
-            msg = self.msg_mgr.create_end_transaction_msg(txn)
-            Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
-        else:
-            self.logResults()
+        self.cntr += 1
+        txn = self.createTxn()
+        msg = self.msg_mgr.create_end_transaction_msg(txn)
+        Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
 
     def recvDecision(self, final_decision):
         self.performTransaction()
@@ -79,7 +76,11 @@ def handleConnection(cl, req_sock):
         print("Recv msg {0}\n".format(req))
         body = req['body']
         if req['msg_type'] == MSG.DECISION:
-            cl.recvDecision(body['final_decision'])
+            if cl.cntr < Const.NUM_TXNS:
+                cl.recvDecision(body['final_decision'])
+            else:
+                cl.logResults()
+                break
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -96,9 +97,9 @@ if __name__ == "__main__":
     client_sock.bind((client_config['ip_addr'], client_config['port']))
     client_sock.listen(5)
     globalTime = time.time()
-    cl.performTransaction()
-    while True:
-        (req_sock, addr) = client_sock.accept()
-        t = threading.Thread(target=handleConnection, args=(cl, req_sock))
-        t.start()
+    txn_t = threading.Thread(target=cl.performTransaction(), args=(cl,))
+    txn_t.start()
+    (req_sock, addr) = client_sock.accept()
+    t = threading.Thread(target=handleConnection, args=(cl, req_sock))
+    t.start()
     

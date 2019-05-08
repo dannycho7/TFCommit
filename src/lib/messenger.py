@@ -6,6 +6,7 @@ import threading
 
 MAX_RECV_NBYTES = 2048
 MESSAGE_SIZE_HEADER_NBYTES = 4
+RETRY_MAX=2
 
 class Messenger:
 	__inst = None
@@ -29,7 +30,7 @@ class Messenger:
 		return msg_obj
 
 	"""
-	Returns parsed msg if valid msg or None is invalid msg/socket is closed
+	Returns parsed msg if valid msg or None if invalid msg/socket is closed
 	"""
 	@classmethod
 	def recv(cls, sock):
@@ -40,6 +41,7 @@ class Messenger:
 		buf = b''
 		while len(buf) != msg_nbytes:
 			buf += sock.recv(min(MAX_RECV_NBYTES, msg_nbytes - len(buf)))
+		sock.send(msg_nbytes_s) # ACK
 		return cls.parse(buf)
 
 	def broadcast(self, msg, recipients):
@@ -51,12 +53,22 @@ class Messenger:
 		for t in send_threads:
 			t.join()
 
+	def _recvAck(self, addr):
+		try:
+			ack_nbytes = self.socket_map[addr].recv(MESSAGE_SIZE_HEADER_NBYTES)
+			return ack_nbytes
+		except ConnectionResetError:
+			print("ConnectionResetError from {0}".format(addr))
+			return 0
+
 	"""
 	All messages are pre-pended with a 4-byte integer that indicates the length of the message in bytes.
 	"""
-	def send(self, msg, addr):
+	def send(self, msg, addr, ignore_cache=False, retry_left=RETRY_MAX):
+		if retry_left <= 0:
+			raise ValueError("retry_left must be > 0.")
 		self.lock.acquire()
-		if addr not in self.socket_map:
+		if ignore_cache or addr not in self.socket_map:
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.connect(addr)
 			self.socket_map[addr] = sock
@@ -65,5 +77,12 @@ class Messenger:
 		msg_full = msg_nbytes + msg
 		while written_nbytes < len(msg_full):
 			written_nbytes += self.socket_map[addr].send(msg_full[written_nbytes:])
+		ack_nbytes = self._recvAck(addr)
 		self.lock.release()
-		return written_nbytes
+		if ack_nbytes != msg_nbytes:
+			if retry_left > 0:
+				print("No ack from {0}. Retrying with new socket...".format(addr))
+				ack_nbytes = self.send(msg, addr, True, retry_left - 1)
+			else:
+				print("Out of retries.")
+		return ack_nbytes

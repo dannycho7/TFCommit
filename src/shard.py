@@ -94,29 +94,33 @@ class Shard:
 			block = pickle.loads(body['block'])
 			self.bch.appendBlock(block)
 
+def handleReq(req):
+	print("Recv msg {0}\n".format(req))
+	body = req['body']
+	sh.lock.acquire()
+	if req['msg_type'] == MSG.END_TRANSACTION:
+		rw_set_list = pickle.loads(body['rw_set_list'])
+		sh.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
+	elif req['msg_type'] == MSG.GET_VOTE:
+		block = pickle.loads(body['block'])
+		sh.recvGetVote(req, block, body['updates'])
+	elif req['msg_type'] == MSG.VOTE:
+		sh.recvVote(body)
+	elif req['msg_type'] == MSG.PREPARE:
+		sh.recvPrepare(req, body)
+	elif req['msg_type'] == MSG.ACK:
+		sh.recvAck(body['sch_response'])
+	elif req['msg_type'] == MSG.DECISION:
+		sh.recvDecision(body['final_decision'], body)
+	sh.lock.release()
+
 def handleConnection(sh, client_sock):
 	while True:
 		req = Messenger.recv(client_sock)
 		if req == None:
 			break
-		print("Recv msg {0}\n".format(req))
-		body = req['body']
-		sh.lock.acquire()
-		if req['msg_type'] == MSG.END_TRANSACTION:
-			rw_set_list = pickle.loads(body['rw_set_list'])
-			sh.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
-		elif req['msg_type'] == MSG.GET_VOTE:
-			block = pickle.loads(body['block'])
-			sh.recvGetVote(req, block, body['updates'])
-		elif req['msg_type'] == MSG.VOTE:
-			sh.recvVote(body)
-		elif req['msg_type'] == MSG.PREPARE:
-			sh.recvPrepare(req, body)
-		elif req['msg_type'] == MSG.ACK:
-			sh.recvAck(body['sch_response'])
-		elif req['msg_type'] == MSG.DECISION:
-			sh.recvDecision(body['final_decision'], body)
-		sh.lock.release()
+		t = threading.Thread(target=handleReq, args=(req,))
+		t.start()
 
 def createMHT(shard_i):
 	strt = shard_i * Const.NUM_ELEMENTS + 1
@@ -141,5 +145,5 @@ if __name__ == "__main__":
 	server_sock.listen(5)
 	while True:
 		(client_sock, addr) = server_sock.accept()
-		t = threading.Thread(target=handleConnection, args=(sh, client_sock))
+		t = threading.Thread(target=handleConnection, args=(sh, client_sock,))
 		t.start()

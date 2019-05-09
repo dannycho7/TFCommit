@@ -11,7 +11,6 @@ sys.path.insert(0, './lib')
 from blockchain import RWSet
 from messenger import Messenger
 from msg_types import MessageManager, MSG
-from constants import Const
 
 class Transaction:
     def __init__(self, txn_id, ts, updates, rw_set_list):
@@ -21,10 +20,9 @@ class Transaction:
         self.rw_set_list = rw_set_list
 
 class Client:
-    def __init__(self, config):
-        self.config = config
-        self.shard_config = self.config['shards'][0]
-        client_config = self.config['client']
+    def __init__(self, global_config):
+        self.global_config = global_config
+        client_config = self.global_config['client']
         self.msg_mgr = MessageManager((client_config['ip_addr'], client_config['port']))
         self.cntr = 0
 
@@ -33,33 +31,38 @@ class Client:
         ts = time.time()
         updates = []
         rw_set_list = []
-        for i in range(Const.NUM_OPS):
-            p_id = random.randint(0, Const.NUM_PARTITIONS-1)
-            if i < Const.NUM_PARTITIONS:
+        for i in range(self.global_config['client']['num_ops']):
+            p_id = random.randint(0, self.global_config['num_elements'] - 1)
+            if i < len(self.global_config['shards']):
                 p_id = i
-            v = random.randint(0, Const.NUM_ELEMENTS)
+            v = random.randint(0, self.global_config['num_elements'])
             val = bytes('v' + str(v), 'utf-8')
-            strt = p_id * Const.NUM_ELEMENTS
-            k = random.randint(strt, strt + Const.NUM_ELEMENTS)
+            strt = p_id * self.global_config['num_elements']
+            k = random.randint(strt, strt + self.global_config['num_elements'])
             key = bytes('k' + str(k), 'utf-8')
             updates.append((key, val))
             rw_set_list.append(RWSet({}, {key: hash(val)}))
         return Transaction(txn_id, ts, updates, rw_set_list)
 
-    def performTransaction(self):
-        self.cntr += 1
-        txn = self.createTxn()
-        msg = self.msg_mgr.create_end_transaction_msg(txn)
-        Messenger.get().send(msg, (self.shard_config['ip_addr'], self.shard_config['port']))
-
-    def recvDecision(self, final_decision):
-        self.performTransaction()
-
+    def handleConnection(self, req_sock):
+        while True:
+            req = Messenger.recv(req_sock)
+            if req == None:
+                break
+            print("Recv msg {0}\n".format(req))
+            body = req['body']
+            if req['msg_type'] == MSG.DECISION:
+                if self.cntr < self.global_config['client']['num_txns']:
+                    self.recvDecision(body['final_decision'])
+                else:
+                    self.logResults()
+                    break
+                    
     def logResults(self):
         timeElapsed = time.time() - globalTime
-        txnRate = Const.NUM_TXNS/timeElapsed
+        txnRate = self.global_config['client']['num_txns']/timeElapsed
         msg = str(timeElapsed) + ':' + str(txnRate)
-        msg += str(Const.NUM_PARTITIONS) + '\n'
+        msg += str(len(self.global_config['shards'])) + '\n'
         
         if not os.path.exists('./results'):
             os.mkdir('results')
@@ -68,19 +71,14 @@ class Client:
         fd.write(msg)
         fd.close()
 
-def handleConnection(cl, req_sock):
-    while True:
-        req = Messenger.recv(req_sock)
-        if req == None:
-            break
-        print("Recv msg {0}\n".format(req))
-        body = req['body']
-        if req['msg_type'] == MSG.DECISION:
-            if cl.cntr < Const.NUM_TXNS:
-                cl.recvDecision(body['final_decision'])
-            else:
-                cl.logResults()
-                break
+    def performTransaction(self):
+        self.cntr += 1
+        txn = self.createTxn()
+        msg = self.msg_mgr.create_end_transaction_msg(txn)
+        Messenger.get().send(msg, (self.global_config['shards'][0]['ip_addr'], self.global_config['shards'][0]['port']))
+
+    def recvDecision(self, final_decision):
+        self.performTransaction()
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -91,15 +89,14 @@ if __name__ == "__main__":
     cl = Client(config)
 
     client_config = config['client']
-    print(client_config)
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     client_sock.bind((client_config['ip_addr'], client_config['port']))
     client_sock.listen(5)
     globalTime = time.time()
-    txn_t = threading.Thread(target=cl.performTransaction(), args=(cl,))
+    txn_t = threading.Thread(target=cl.performTransaction)
     txn_t.start()
     (req_sock, addr) = client_sock.accept()
-    t = threading.Thread(target=handleConnection, args=(cl, req_sock))
+    t = threading.Thread(target=cl.handleConnection, args=(req_sock,))
     t.start()
     

@@ -11,7 +11,6 @@ from merkle_tree import MerkleTree, VO_C
 from messenger import Messenger
 from msg_types import MSG, MessageManager
 from cosi import *
-from constants import Const
 
 class CurrentExecution:
 	def __init__(self, bid):
@@ -34,6 +33,34 @@ class Shard:
 		self.lock = threading.Lock()
 		shard_config = self.global_config['shards'][self.shard_i]
 		self.msg_mgr = MessageManager((shard_config['ip_addr'], shard_config['port']))
+
+	def handleReq(self, req):
+		print("Recv msg {0}\n".format(req))
+		body = req['body']
+		self.lock.acquire()
+		if req['msg_type'] == MSG.END_TRANSACTION:
+			rw_set_list = pickle.loads(body['rw_set_list'])
+			self.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
+		elif req['msg_type'] == MSG.GET_VOTE:
+			block = pickle.loads(body['block'])
+			self.recvGetVote(req, block, body['updates'])
+		elif req['msg_type'] == MSG.VOTE:
+			self.recvVote(body)
+		elif req['msg_type'] == MSG.PREPARE:
+			self.recvPrepare(req, body)
+		elif req['msg_type'] == MSG.ACK:
+			self.recvAck(body['sch_response'])
+		elif req['msg_type'] == MSG.DECISION:
+			self.recvDecision(body['final_decision'], body)
+		self.lock.release()
+
+	def handleConnection(self, client_sock):
+		while True:
+			req = Messenger.recv(client_sock)
+			if req == None:
+				break
+			t = threading.Thread(target=self.handleReq, args=(req,))
+			t.start()
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
 		txns = [Transaction(rw_set) for rw_set in rw_set_list]
@@ -94,37 +121,9 @@ class Shard:
 			block = pickle.loads(body['block'])
 			self.bch.appendBlock(block)
 
-def handleReq(req):
-	print("Recv msg {0}\n".format(req))
-	body = req['body']
-	sh.lock.acquire()
-	if req['msg_type'] == MSG.END_TRANSACTION:
-		rw_set_list = pickle.loads(body['rw_set_list'])
-		sh.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
-	elif req['msg_type'] == MSG.GET_VOTE:
-		block = pickle.loads(body['block'])
-		sh.recvGetVote(req, block, body['updates'])
-	elif req['msg_type'] == MSG.VOTE:
-		sh.recvVote(body)
-	elif req['msg_type'] == MSG.PREPARE:
-		sh.recvPrepare(req, body)
-	elif req['msg_type'] == MSG.ACK:
-		sh.recvAck(body['sch_response'])
-	elif req['msg_type'] == MSG.DECISION:
-		sh.recvDecision(body['final_decision'], body)
-	sh.lock.release()
-
-def handleConnection(sh, client_sock):
-	while True:
-		req = Messenger.recv(client_sock)
-		if req == None:
-			break
-		t = threading.Thread(target=handleReq, args=(req,))
-		t.start()
-
-def createMHT(shard_i):
-	strt = shard_i * Const.NUM_ELEMENTS + 1
-	kv_map = { bytes('k'+str(i), 'utf-8'): bytes('v'+str(i), 'utf-8') for i in range(strt, strt+ Const.NUM_ELEMENTS) }
+def createMHT(shard_i, num_elements):
+	strt = shard_i * num_elements + 1
+	kv_map = { bytes('k'+str(i), 'utf-8'): bytes('v'+str(i), 'utf-8') for i in range(strt, strt + num_elements) }
 	return MerkleTree(kv_map)
 
 if __name__ == "__main__":
@@ -133,7 +132,7 @@ if __name__ == "__main__":
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
-	mht = createMHT(shard_i)
+	mht = createMHT(shard_i, config['num_elements'])
 	data_ts = {b'k1': (0, 0)}
 	sh = Shard(config, shard_i, mht, data_ts)
 
@@ -145,5 +144,5 @@ if __name__ == "__main__":
 	server_sock.listen(5)
 	while True:
 		(client_sock, addr) = server_sock.accept()
-		t = threading.Thread(target=handleConnection, args=(sh, client_sock,))
+		t = threading.Thread(target=sh.handleConnection, args=(client_sock,))
 		t.start()

@@ -32,12 +32,10 @@ class Client:
         updates = []
         rw_set_list = []
         for i in range(self.global_config['client']['num_ops']):
-            p_id = random.randint(0, self.global_config['num_elements'] - 1)
-            if i < len(self.global_config['shards']):
-                p_id = i
-            v = random.randint(0, self.global_config['num_elements'])
+            shard_i = random.randint(0, len(self.global_config['shards']) - 1)
+            v = random.randint(1, self.global_config['num_elements'])
             val = bytes('v' + str(v), 'utf-8')
-            strt = p_id * self.global_config['num_elements']
+            strt = shard_i * self.global_config['num_elements'] + 1
             k = random.randint(strt, strt + self.global_config['num_elements'])
             key = bytes('k' + str(k), 'utf-8')
             updates.append((key, val))

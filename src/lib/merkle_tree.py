@@ -26,6 +26,7 @@ class MerkleTree:
 		return cls(rh_mht.kv_map)
 	def update(self, k: bytes, v: bytes) -> None:
 		mht_so.mht_update(self.mht_obj, c_char_p(k), c_char_p(v))
+		self.kv_map[k] = v
 	def getRoot(self) -> bytes:
 		return mht_so.mht_get_root(self.mht_obj)
 	def getVO(self, k: bytes) -> 'VO_C':

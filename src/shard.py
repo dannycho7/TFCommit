@@ -14,11 +14,12 @@ from cosi import *
 
 class CurrentExecution:
 	def __init__(self, bid):
-		self.bid = bid
-		self.vote_list = []
 		self.ack_resps = []
-		self.sch_challenge = None
+		self.bid = bid
 		self.final_decision = ''
+		self.modded_mht = None
+		self.sch_challenge = None
+		self.vote_list = []
 
 class Shard:
 	def __init__(self, global_config, shard_i, mht, data_ts, bch = Blockchain()):
@@ -77,9 +78,9 @@ class Shard:
 			if k in modded_mht.kv_map:
 				modded_mht.update(k, new_v)
 		sch_commitment = self.cosi.commitment()
+		self.current_execution.modded_mht = modded_mht
 		msg = self.msg_mgr.create_vote_msg(self.shard_i, 'commit', modded_mht.getRoot(), sch_commitment)
 		Messenger.get().send(msg, req['addr'])
-		# TODO: free modded_mht?
 
 	def recvVote(self, v):
 		self.current_execution.vote_list.append(v)
@@ -117,9 +118,15 @@ class Shard:
 
 	def recvDecision(self, final_decision, body):
 		if final_decision == 'commit':
-			# TODO: Update data and ts
 			block = pickle.loads(body['block'])
+			if not self.current_execution or self.current_execution.bid != block.bid or not self.current_execution.modded_mht:
+				raise ValueError('Invalid CurrentExecution. Decision invalid.')
 			self.bch.appendBlock(block)
+			self.mht = self.current_execution.modded_mht
+			for txn in block.txns:
+				for k in txn.rw_set.write_set.keys():
+					if k in self.data_ts:
+						self.data_ts[k] = (block.bid, block.bid)
 
 def createMHT(shard_i, num_elements):
 	strt = shard_i * num_elements + 1

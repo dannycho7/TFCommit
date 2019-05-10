@@ -27,8 +27,8 @@ class Client:
         self.cntr = 0
 
     def createTxn(self):
-        txn_id = time.time()
-        ts = time.time()
+        txn_id = int(time.time())
+        ts = txn_id
         updates = []
         rw_set_list = []
         for i in range(self.global_config['client']['num_ops']):

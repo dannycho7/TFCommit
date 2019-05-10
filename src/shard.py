@@ -133,7 +133,7 @@ if __name__ == "__main__":
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
 	mht = createMHT(shard_i, config['num_elements'])
-	data_ts = {b'k1': (0, 0)}
+	data_ts = {k: (0, 0) for k in mht.kv_map.keys()}
 	sh = Shard(config, shard_i, mht, data_ts)
 
 	shard_config = config['shards'][shard_i]

@@ -27,7 +27,7 @@ class Client:
         self.cntr = 0
 
     def createTxn(self):
-        txn_id = int(time.time())
+        txn_id = time.time()
         ts = txn_id
         updates = []
         rw_set_list = []

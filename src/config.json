@@ -13,7 +13,7 @@
 	"client": {
 		"ip_addr": "127.0.0.1",
 		"port": 3000,
-		"num_txns": 10,
+		"num_txns": 100,
 		"num_ops": 5
 	}
 }

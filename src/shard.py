@@ -7,6 +7,7 @@ import sys
 import threading
 sys.path.insert(0, './lib')
 from blockchain import *
+from queue import Queue
 from merkle_tree import MerkleTree, VO_C
 from messenger import Messenger
 from msg_types import MSG, MessageManager
@@ -34,12 +35,13 @@ class Shard:
 		self.lock = threading.Lock()
 		shard_config = self.global_config['shards'][self.shard_i]
 		self.msg_mgr = MessageManager((shard_config['ip_addr'], shard_config['port']))
+		self.get_vote_q = Queue()
 
 	def handleReq(self, req):
 		print("Recv msg {0}\n".format(req))
 		body = req['body']
 		self.lock.acquire()
-		if req['msg_type'] == MSG.END_TRANSACTION:
+		if req['msg_type'] == MSG.END_TRANSACTION:				
 			rw_set_list = pickle.loads(body['rw_set_list'])
 			self.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
 		elif req['msg_type'] == MSG.GET_VOTE:
@@ -53,26 +55,30 @@ class Shard:
 			self.recvAck(body['sch_response'])
 		elif req['msg_type'] == MSG.DECISION:
 			self.recvDecision(body['final_decision'], body)
+		q_req = self.get_vote_q.get() if self.current_execution is None and not self.get_vote_q.empty() else None
 		self.lock.release()
+		if q_req:
+			self.handleReq(q_req)
 
 	def handleConnection(self, client_sock):
 		while True:
 			req = Messenger.recv(client_sock)
-			if req == None:
-				break
+			if req is None:
+				raise ConnectionError('Something went wrong with the connection')
 			t = threading.Thread(target=self.handleReq, args=(req,))
 			t.start()
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
 		txns = [Transaction(rw_set) for rw_set in rw_set_list]
 		self.pending_block = self.bch.createBlock(ts, txns, {})
-		self.current_execution = CurrentExecution(ts)
 		msg = self.msg_mgr.create_get_vote_msg(self.pending_block, updates)
 		Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvGetVote(self, req, block, updates):
-		if not self.current_execution or self.current_execution.bid != block.bid:
-			self.current_execution = CurrentExecution(block.bid)
+		if self.current_execution:
+			self.get_vote_q.put(req)
+			return
+		self.current_execution = CurrentExecution(block.bid)
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:
 			if k in modded_mht.kv_map:
@@ -127,6 +133,7 @@ class Shard:
 				for k in txn.rw_set.write_set.keys():
 					if k in self.data_ts:
 						self.data_ts[k] = (block.bid, block.bid)
+			self.current_execution = None
 
 def createMHT(shard_i, num_elements):
 	strt = shard_i * num_elements + 1

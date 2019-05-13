@@ -73,15 +73,16 @@ class Shard:
 			return
 		txns = [Transaction(rw_set) for rw_set in rw_set_list]
 		pending_block = self.bch.createBlock(ts, txns, {})
+		self.current_execution = CurrentExecution(pending_block)
 		msg = self.msg_mgr.create_get_vote_msg(pending_block, updates)
 		Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvGetVote(self, req, block, updates):
-		if self.current_execution:
+		if self.current_execution and self.current_execution.block.bid != block.bid:
 			self.req_q.append(req)
 			return
-		self.current_execution = CurrentExecution(block)
-		modded_mht = MerkleTree.copyCreate(self.mht)
+		self.current_execution = CurrentExecution(block) if self.current_execution is None else self.current_execution
+		modded_mht = self.mht#MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:
 			if k in modded_mht.kv_map:
 				modded_mht.update(k, new_v)

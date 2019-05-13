@@ -7,16 +7,16 @@ import sys
 import threading
 sys.path.insert(0, './lib')
 from blockchain import *
-from queue import Queue
+from collections import deque
 from merkle_tree import MerkleTree, VO_C
 from messenger import Messenger
 from msg_types import MSG, MessageManager
 from cosi import *
-
+from time import sleep
 class CurrentExecution:
-	def __init__(self, bid):
+	def __init__(self, block):
 		self.ack_resps = []
-		self.bid = bid
+		self.block = block
 		self.final_decision = ''
 		self.modded_mht = None
 		self.sch_challenge = None
@@ -29,13 +29,12 @@ class Shard:
 		self.mht = mht
 		self.data_ts = data_ts
 		self.bch = bch
-		self.pending_block = None
 		self.current_execution = None
 		self.cosi = CoSi()
 		self.lock = threading.Lock()
 		shard_config = self.global_config['shards'][self.shard_i]
 		self.msg_mgr = MessageManager((shard_config['ip_addr'], shard_config['port']))
-		self.get_vote_q = Queue()
+		self.req_q = deque()
 
 	def handleReq(self, req):
 		print("Recv msg {0}\n".format(req))
@@ -55,7 +54,7 @@ class Shard:
 			self.recvAck(body['sch_response'])
 		elif req['msg_type'] == MSG.DECISION:
 			self.recvDecision(body['final_decision'], body)
-		q_req = self.get_vote_q.get() if self.current_execution is None and not self.get_vote_q.empty() else None
+		q_req = self.req_q.pop() if self.current_execution is None and len(self.req_q) > 0 else None
 		self.lock.release()
 		if q_req:
 			self.handleReq(q_req)
@@ -64,21 +63,24 @@ class Shard:
 		while True:
 			req = Messenger.recv(client_sock)
 			if req is None:
-				raise ConnectionError('Something went wrong with the connection')
+				break
 			t = threading.Thread(target=self.handleReq, args=(req,))
 			t.start()
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
+		if self.current_execution:
+			self.req_q.appendleft(req)
+			return
 		txns = [Transaction(rw_set) for rw_set in rw_set_list]
-		self.pending_block = self.bch.createBlock(ts, txns, {})
-		msg = self.msg_mgr.create_get_vote_msg(self.pending_block, updates)
+		pending_block = self.bch.createBlock(ts, txns, {})
+		msg = self.msg_mgr.create_get_vote_msg(pending_block, updates)
 		Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvGetVote(self, req, block, updates):
 		if self.current_execution:
-			self.get_vote_q.put(req)
+			self.req_q.append(req)
 			return
-		self.current_execution = CurrentExecution(block.bid)
+		self.current_execution = CurrentExecution(block)
 		modded_mht = MerkleTree.copyCreate(self.mht)
 		for k, new_v in updates:
 			if k in modded_mht.kv_map:
@@ -95,14 +97,14 @@ class Shard:
 			sch_commits = []
 			for vote in self.current_execution.vote_list:
 				if vote['decision'] == 'commit':
-					self.pending_block.roots[vote['sender_id']] = vote['root']
+					self.current_execution.block.roots[vote['sender_id']] = vote['root']
 					sch_commits.append(vote['sch_commitment'])
 				else:
 					final_decision = 'abort'
 			self.current_execution.final_decision = final_decision
-			sch_challenge = self.cosi.challenge(str(self.pending_block), sch_commits)
+			sch_challenge = self.cosi.challenge(str(self.current_execution.block), sch_commits)
 			self.current_execution.sch_challenge = sch_challenge
-			msg = self.msg_mgr.create_prepare_msg(final_decision, self.pending_block, sch_challenge)
+			msg = self.msg_mgr.create_prepare_msg(final_decision, self.current_execution.block, sch_challenge)
 			Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvPrepare(self, req, body):
@@ -117,15 +119,15 @@ class Shard:
 		curr_exec.ack_resps.append(res)
 		if len(curr_exec.ack_resps) == len(self.global_config['shards']):
 			aggrR = self.cosi.aggr_response(curr_exec.ack_resps)
-			self.pending_block.cosign = tuple((curr_exec.sch_challenge, aggrR))
-			msg = self.msg_mgr.create_decision_msg(self.current_execution.final_decision, self.pending_block)
+			self.current_execution.block.cosign = tuple((curr_exec.sch_challenge, aggrR))
+			msg = self.msg_mgr.create_decision_msg(self.current_execution.final_decision, self.current_execution.block)
 			Messenger.get().send(msg, (self.global_config["client"]["ip_addr"], self.global_config["client"]["port"]))
 			Messenger.get().broadcast(msg, self.global_config['shards'])
 
 	def recvDecision(self, final_decision, body):
 		if final_decision == 'commit':
 			block = pickle.loads(body['block'])
-			if not self.current_execution or self.current_execution.bid != block.bid or not self.current_execution.modded_mht:
+			if not self.current_execution or self.current_execution.block.bid != block.bid or not self.current_execution.modded_mht:
 				raise ValueError('Invalid CurrentExecution. Decision invalid.')
 			self.bch.appendBlock(block)
 			self.mht = self.current_execution.modded_mht

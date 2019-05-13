@@ -97,10 +97,9 @@ class Shard:
 			final_decision = 'commit'
 			sch_commits = []
 			for vote in self.current_execution.vote_list:
-				if vote['decision'] == 'commit':
-					self.current_execution.block.roots[vote['sender_id']] = vote['root']
-					sch_commits.append(vote['sch_commitment'])
-				else:
+				self.current_execution.block.roots[vote['sender_id']] = vote['root']
+				sch_commits.append(vote['sch_commitment'])
+				if vote['decision'] != 'commit':
 					final_decision = 'abort'
 			self.current_execution.final_decision = final_decision
 			sch_challenge = self.cosi.challenge(str(self.current_execution.block), sch_commits)

@@ -18,7 +18,7 @@ class CurrentExecution:
 		self.ack_resps = []
 		self.block = block
 		self.final_decision = ''
-		self.modded_mht = None
+		self.rollback_updates = []
 		self.sch_challenge = None
 		self.vote_list = []
 
@@ -82,13 +82,13 @@ class Shard:
 			self.req_q.append(req)
 			return
 		self.current_execution = CurrentExecution(block) if self.current_execution is None else self.current_execution
-		modded_mht = self.mht#MerkleTree.copyCreate(self.mht)
+		update_keys = [update[0] for update in updates]
+		self.current_execution.rollback_updates = list(filter(lambda kv: kv[0] in update_keys, self.mht.kv_map.items()))
 		for k, new_v in updates:
-			if k in modded_mht.kv_map:
-				modded_mht.update(k, new_v)
+			if k in self.mht.kv_map:
+				self.mht.update(k, new_v)
 		sch_commitment = self.cosi.commitment()
-		self.current_execution.modded_mht = modded_mht
-		msg = self.msg_mgr.create_vote_msg(self.shard_i, 'commit', modded_mht.getRoot(), sch_commitment)
+		msg = self.msg_mgr.create_vote_msg(self.shard_i, 'commit', self.mht.getRoot(), sch_commitment)
 		Messenger.get().send(msg, req['addr'])
 
 	def recvVote(self, v):
@@ -127,15 +127,17 @@ class Shard:
 	def recvDecision(self, final_decision, body):
 		if final_decision == 'commit':
 			block = pickle.loads(body['block'])
-			if not self.current_execution or self.current_execution.block.bid != block.bid or not self.current_execution.modded_mht:
+			if not self.current_execution or self.current_execution.block.bid != block.bid:
 				raise ValueError('Invalid CurrentExecution. Decision invalid.')
 			self.bch.appendBlock(block)
-			self.mht = self.current_execution.modded_mht
 			for txn in block.txns:
 				for k in txn.rw_set.write_set.keys():
 					if k in self.data_ts:
 						self.data_ts[k] = (block.bid, block.bid)
-			self.current_execution = None
+		elif final_decision == 'abort':
+			for k, old_v in self.current_execution.rollback_updates:
+				self.mht.update(k, old_v)
+		self.current_execution = None
 
 def createMHT(shard_i, num_elements):
 	strt = shard_i * num_elements + 1

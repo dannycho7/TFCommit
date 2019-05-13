@@ -83,7 +83,7 @@ class Shard:
 			return
 		self.current_execution = CurrentExecution(block) if self.current_execution is None else self.current_execution
 		update_keys = [update[0] for update in updates]
-		self.current_execution.rollback_updates = list(filter(lambda kv: kv[0] in update_keys, self.mht.kv_map.items()))
+		self.current_execution.rollback_updates = [self.mht.kv_map[k] for k in filter(lambda k: k in self.mht.kv_map, update_keys)]
 		for k, new_v in updates:
 			if k in self.mht.kv_map:
 				self.mht.update(k, new_v)

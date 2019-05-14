@@ -49,7 +49,8 @@ class Client:
             req = Messenger.recv(req_sock)
             if req == None:
                 break
-            print("Recv msg {0}\n".format(req))
+            if verbose:
+                print("Recv msg {0}\n".format(req))
             body = req['body']
             if req['msg_type'] == MSG.DECISION:
                 if self.cntr < self.global_config['client']['num_txns']:
@@ -84,13 +85,13 @@ class Client:
         self.performTransaction()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-    	print("Correct Usage: {0} <config_file_path>".format(sys.argv[0]))
+    if len(sys.argv) != 3:
+    	print("Correct Usage: {0} <config_file_path> <verbose>".format(sys.argv[0]))
     	sys.exit()
     
     config = json.load(open(sys.argv[1]))
     cl = Client(config)
-
+    verbose = bool(int(sys.argv[2]))
     client_config = config['client']
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

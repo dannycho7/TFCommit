@@ -5,6 +5,7 @@ import pickle
 import socket
 import sys
 import threading
+import time
 sys.path.insert(0, './lib')
 from blockchain import *
 from collections import deque
@@ -12,7 +13,6 @@ from merkle_tree import MerkleTree, VO_C
 from messenger import Messenger
 from msg_types import MSG, MessageManager
 from cosi import *
-from time import sleep
 class CurrentExecution:
 	def __init__(self, block):
 		self.ack_resps = []
@@ -37,7 +37,8 @@ class Shard:
 		self.req_q = deque()
 
 	def handleReq(self, req):
-		print("Recv msg {0}\n".format(req))
+		if verbose:
+			print("Recv msg {0}\n".format(req))
 		body = req['body']
 		self.lock.acquire()
 		if req['msg_type'] == MSG.END_TRANSACTION:				
@@ -83,7 +84,7 @@ class Shard:
 			return
 		self.current_execution = CurrentExecution(block) if self.current_execution is None else self.current_execution
 		update_keys = [update[0] for update in updates]
-		self.current_execution.rollback_updates = [self.mht.kv_map[k] for k in filter(lambda k: k in self.mht.kv_map, update_keys)]
+		self.current_execution.rollback_updates = list(filter(lambda kv: kv[0] in update_keys, self.mht.kv_map.items()))
 		for k, new_v in updates:
 			if k in self.mht.kv_map:
 				self.mht.update(k, new_v)
@@ -145,8 +146,8 @@ def createMHT(shard_i, num_elements):
 	return MerkleTree(kv_map)
 
 if __name__ == "__main__":
-	if len(sys.argv) != 3:
-		print("Correct Usage: {0} <config_file_path> <shard_i>".format(sys.argv[0]))
+	if len(sys.argv) != 4:
+		print("Correct Usage: {0} <config_file_path> <shard_i> <verbose>".format(sys.argv[0]))
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
@@ -155,7 +156,7 @@ if __name__ == "__main__":
 	sh = Shard(config, shard_i, mht, data_ts)
 
 	shard_config = config['shards'][shard_i]
-
+	verbose = bool(int(sys.argv[3]))
 	server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	server_sock.bind((shard_config['ip_addr'], shard_config['port']))

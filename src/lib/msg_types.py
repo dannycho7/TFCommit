@@ -83,8 +83,9 @@ class MessageManager:
 
 class TwoPCMessageManager(MessageManager):
 
-	def create_vote_msg(self, decision):
+	def create_vote_msg(self, sender_id, decision):
 		vote_body = {
+			'sender_id': sender_id,
 			'decision': decision
 		}
 		return self.create_msg(MSG.VOTE, vote_body)

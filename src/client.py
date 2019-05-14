@@ -33,6 +33,8 @@ class Client:
         rw_set_list = []
         for i in range(self.global_config['client']['num_ops']):
             shard_i = random.randint(0, len(self.global_config['shards']) - 1)
+            if i < len(self.global_config['shards']):
+                shard_i = i
             v = random.randint(1, self.global_config['num_elements'])
             val = bytes('v' + str(v), 'utf-8')
             strt = shard_i * self.global_config['num_elements'] + 1
@@ -57,10 +59,13 @@ class Client:
                     break
                     
     def logResults(self):
+        print('Done!')
+        num_txns = self.global_config['client']['num_txns']
         timeElapsed = time.time() - globalTime
-        txnRate = self.global_config['client']['num_txns']/timeElapsed
-        msg = str(timeElapsed) + ':' + str(txnRate)
-        msg += str(len(self.global_config['shards'])) + '\n'
+        latency = timeElapsed/num_txns
+        txnRate = num_txns/timeElapsed
+        msg = str(latency) + ':' + str(txnRate) + ':' + str(num_txns)
+        msg += ':' + str(len(self.global_config['shards'])) + '\n'
         
         if not os.path.exists('./results'):
             os.mkdir('results')

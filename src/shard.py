@@ -18,16 +18,15 @@ class CurrentExecution:
 		self.ack_resps = []
 		self.block = block
 		self.final_decision = ''
-		self.rollback_updates = []
 		self.sch_challenge = None
 		self.vote_list = []
 
 class Shard:
-	def __init__(self, global_config, shard_i, mht, data_ts, bch = Blockchain()):
+	def __init__(self, global_config, shard_i, mht, bch = Blockchain()):
 		self.global_config = global_config
 		self.shard_i = shard_i
 		self.mht = mht
-		self.data_ts = data_ts
+		self.data = {k: (v, 0, 0) for k, v in mht.kv_map.items()}
 		self.bch = bch
 		self.current_execution = None
 		self.cosi = CoSi()
@@ -83,8 +82,6 @@ class Shard:
 			self.req_q.append(req)
 			return
 		self.current_execution = CurrentExecution(block) if self.current_execution is None else self.current_execution
-		update_keys = [update[0] for update in updates]
-		self.current_execution.rollback_updates = list(filter(lambda kv: kv[0] in update_keys, self.mht.kv_map.items()))
 		for k, new_v in updates:
 			if k in self.mht.kv_map:
 				self.mht.update(k, new_v)
@@ -133,11 +130,11 @@ class Shard:
 			self.bch.appendBlock(block)
 			for txn in block.txns:
 				for k in txn.rw_set.write_set.keys():
-					if k in self.data_ts:
-						self.data_ts[k] = (block.bid, block.bid)
+					if k in self.data:
+						self.data[k] = (self.mht.kv_map[k], block.bid, block.bid)
 		elif final_decision == 'abort':
-			for k, old_v in self.current_execution.rollback_updates:
-				self.mht.update(k, old_v)
+			kv_map = { k : self.data[k][0] for k in self.data }
+			self.mht = MerkleTree(kv_map)
 		self.current_execution = None
 
 def createMHT(shard_i, num_elements):
@@ -152,8 +149,7 @@ if __name__ == "__main__":
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
 	mht = createMHT(shard_i, config['num_elements'])
-	data_ts = {k: (0, 0) for k in mht.kv_map.keys()}
-	sh = Shard(config, shard_i, mht, data_ts)
+	sh = Shard(config, shard_i, mht)
 
 	shard_config = config['shards'][shard_i]
 	verbose = bool(int(sys.argv[3]))

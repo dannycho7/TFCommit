@@ -12,6 +12,7 @@ from blockchain import RWSet
 from messenger import Messenger
 from msg_types import MessageManager, MSG
 
+OPS_PER_TXN = 5
 class Transaction:
     def __init__(self, txn_id, ts, updates, rw_set_list):
         self.id = txn_id
@@ -62,6 +63,7 @@ class Client:
     def logResults(self):
         print('Done!')
         num_txns = self.global_config['client']['num_txns']
+        num_txns *= int(self.global_config['client']['num_ops'] / OPS_PER_TXN)
         timeElapsed = time.time() - globalTime
         latency = timeElapsed/num_txns
         txnRate = num_txns/timeElapsed

@@ -14,9 +14,10 @@ class CoSi():
         return self.pub_key
 
     def commitment(self):
-        self.v = keys.gen_private_key(curve.P256)
-        V = keys.get_public_key(self.v, curve.P256) # V = G^v
-        return V
+        if self.v == 0:
+            self.v = keys.gen_private_key(curve.P256)
+            self.V = keys.get_public_key(self.v, curve.P256) # V = G^v
+        return self.V
 
     def response(self, ch): #ch --> str
         ch = int(ch, 16)

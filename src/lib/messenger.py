@@ -77,13 +77,13 @@ class Messenger:
 		msg_full = msg_nbytes + msg
 		while written_nbytes < len(msg_full):
 			written_nbytes += self.socket_map[addr].send(msg_full[written_nbytes:])
-		#ack_nbytes = self._recvAck(addr)
+		ack_nbytes = self._recvAck(addr)
 		self.lock.release()
-		# if ack_nbytes != msg_nbytes:
-		# 	if retry_left > 0:
-		# 		print("No ack from {0}. Retrying with new socket...".format(addr))
-		# 		ack_nbytes = self.send(msg, addr, True, retry_left - 1)
-		# 	else:
-		# 		print("Out of retries.")
-		# return ack_nbytes
-		return written_nbytes
+		if ack_nbytes != msg_nbytes:
+			if retry_left > 0:
+				print("No ack from {0}. Retrying with new socket...".format(addr))
+				ack_nbytes = self.send(msg, addr, True, retry_left - 1)
+			else:
+				print("Out of retries.")
+		return ack_nbytes
+		#return written_nbytes

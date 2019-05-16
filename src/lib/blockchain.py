@@ -44,6 +44,7 @@ class Block:
 		self.roots = roots
 		self.prev_block_hash = prev_block_hash
 		self.cosign = ()
+		self.mht_update_time = 0
 	def __hash__(self):
 		return hash(str(self))
 	def __str__(self):
@@ -52,7 +53,8 @@ class Block:
 			'txns': str(self.txns),
 			'roots': self.roots,
 			'prev_block_hash': self.prev_block_hash,
-			'cosign': self.cosign
+			'cosign': self.cosign,
+			'mht_update_time': self.mht_update_time
 		})
 
 class Blockchain:

@@ -145,12 +145,12 @@ def createMHT(shard_i, num_elements):
 	return MerkleTree(kv_map)
 
 if __name__ == "__main__":
-	if len(sys.argv) != 4:
+	if len(sys.argv) != 5:
 		print("Correct Usage: {0} <config_file_path> <shard_i> <verbose>".format(sys.argv[0]))
 		sys.exit()
 	config = json.load(open(sys.argv[1]))
 	shard_i = int(sys.argv[2])
-	mht = createMHT(shard_i, config['num_elements'])
+	mht = createMHT(shard_i, int(sys.argv[4]))
 	sh = Shard(config, shard_i, mht)
 
 	shard_config = config['shards'][shard_i]

@@ -38,10 +38,10 @@ class Client:
             shard_i = random.randint(0, len(self.global_config['shards']) - 1)
             if i < len(self.global_config['shards']):
                 shard_i = i
-            v = random.randint(1, self.global_config['num_elements'])
+            v = random.randint(1, num_elements)
             val = bytes('v' + str(v), 'utf-8')
-            strt = shard_i * self.global_config['num_elements'] + 1
-            k = random.randint(strt, strt + self.global_config['num_elements'])
+            strt = shard_i * num_elements + 1
+            k = random.randint(strt, strt + num_elements)
             key = bytes('k' + str(k), 'utf-8')
             updates.append((key, val))
             rw_set_list.append(RWSet({}, {key: hash(val)}))
@@ -100,8 +100,8 @@ if __name__ == "__main__":
     config = json.load(open(sys.argv[1]))
     cl = Client(config)
     verbose = bool(int(sys.argv[2]))
+    num_elements = int(sys.argv[3])
     num_ops = config['client']['num_ops']
-    num_ops = int(sys.argv[3])
     client_config = config['client']
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

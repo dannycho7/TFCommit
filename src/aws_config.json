@@ -25,6 +25,6 @@
         "ip_addr": "172.30.0.132",
         "port": 3000,
         "num_txns": 1000,
-        "num_ops": 5
+        "num_ops": 500
     }
 }

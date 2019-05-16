@@ -82,9 +82,11 @@ class Shard:
 			self.req_q.append(req)
 			return
 		self.current_execution = CurrentExecution(block) if self.current_execution is None else self.current_execution
+		strt_time = time.time()
 		for k, new_v in updates:
 			if k in self.mht.kv_map:
 				self.mht.update(k, new_v)
+		self.current_execution.block.mht_update_time = time.time() - strt_time
 		sch_commitment = self.cosi.commitment()
 		msg = self.msg_mgr.create_vote_msg(self.shard_i, 'commit', self.mht.getRoot(), sch_commitment)
 		Messenger.get().send(msg, req['addr'])

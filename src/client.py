@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import json
+import pickle
 import sys
 import socket
 import threading
@@ -26,6 +27,7 @@ class Client:
         client_config = self.global_config['client']
         self.msg_mgr = MessageManager((client_config['ip_addr'], client_config['port']))
         self.cntr = 0
+        self.total_mht_update_time = 0.0
 
     def createTxn(self):
         txn_id = time.time()
@@ -55,7 +57,8 @@ class Client:
             body = req['body']
             if req['msg_type'] == MSG.DECISION:
                 if self.cntr < self.global_config['client']['num_txns']:
-                    self.recvDecision(body['final_decision'])
+                    block = pickle.loads(body['block'])
+                    self.recvDecision(body['final_decision'], block.mht_update_time)
                 else:
                     self.logResults()
                     break
@@ -67,8 +70,10 @@ class Client:
         timeElapsed = time.time() - globalTime
         latency = timeElapsed/num_txns
         txnRate = num_txns/timeElapsed
-        msg = str(latency) + ':' + str(txnRate) + ':' + str(num_txns)
-        msg += ':' + str(len(self.global_config['shards'])) + '\n'
+        mht_update_time = self.total_mht_update_time / num_txns
+
+        msg = str(latency) + ':' + str(txnRate) + ':' + str(mht_update_time)
+        msg += ':' + str(num_txns) + ':' + str(len(self.global_config['shards'])) + '\n'
         
         if not os.path.exists('./results'):
             os.mkdir('results')
@@ -83,7 +88,8 @@ class Client:
         msg = self.msg_mgr.create_end_transaction_msg(txn)
         Messenger.get().send(msg, (self.global_config['shards'][0]['ip_addr'], self.global_config['shards'][0]['port']))
 
-    def recvDecision(self, final_decision):
+    def recvDecision(self, final_decision, update_time):
+        self.total_mht_update_time += update_time
         self.performTransaction()
 
 if __name__ == "__main__":

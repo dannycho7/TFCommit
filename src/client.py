@@ -32,7 +32,7 @@ class Client:
         ts = txn_id
         updates = []
         rw_set_list = []
-        for i in range(self.global_config['client']['num_ops']):
+        for i in range(num_ops):
             shard_i = random.randint(0, len(self.global_config['shards']) - 1)
             if i < len(self.global_config['shards']):
                 shard_i = i
@@ -63,7 +63,7 @@ class Client:
     def logResults(self):
         print('Done!')
         num_txns = self.global_config['client']['num_txns']
-        num_txns *= int(self.global_config['client']['num_ops'] / OPS_PER_TXN)
+        num_txns *= int(num_ops / OPS_PER_TXN)
         timeElapsed = time.time() - globalTime
         latency = timeElapsed/num_txns
         txnRate = num_txns/timeElapsed
@@ -87,13 +87,15 @@ class Client:
         self.performTransaction()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
     	print("Correct Usage: {0} <config_file_path> <verbose>".format(sys.argv[0]))
     	sys.exit()
     
     config = json.load(open(sys.argv[1]))
     cl = Client(config)
     verbose = bool(int(sys.argv[2]))
+    num_ops = config['client']['num_ops']
+    num_ops = int(sys.argv[3])
     client_config = config['client']
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

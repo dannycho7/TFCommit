@@ -100,8 +100,8 @@ if __name__ == "__main__":
     config = json.load(open(sys.argv[1]))
     cl = Client(config)
     verbose = bool(int(sys.argv[2]))
-    num_elements = int(sys.argv[3])
-    num_ops = config['client']['num_ops']
+    num_elements = config['client']['num_elements']
+    num_ops = int(sys.argv[3])
     client_config = config['client']
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

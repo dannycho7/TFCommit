@@ -25,23 +25,21 @@ class Client:
         client_config = self.global_config['client']
         self.msg_mgr = MessageManager((client_config['ip_addr'], client_config['port']))
         self.cntr = 0
+        self.data_buf = []
+        self.lock = threading.Lock()
 
     def createTxn(self):
         txn_id = time.time()
         ts = txn_id
         updates = []
         rw_set_list = []
-        for i in range(self.global_config['client']['num_ops']):
-            shard_i = random.randint(0, len(self.global_config['shards']) - 1)
-            if i < len(self.global_config['shards']):
-                shard_i = i
+
+        for k, old_v in self.data_buf:
             v = random.randint(1, self.global_config['num_elements'])
-            val = bytes('v' + str(v), 'utf-8')
-            strt = shard_i * self.global_config['num_elements'] + 1
-            k = random.randint(strt, strt + self.global_config['num_elements'])
-            key = bytes('k' + str(k), 'utf-8')
-            updates.append((key, val))
-            rw_set_list.append(RWSet({}, {key: hash(val)}))
+            v_s = bytes('v' + str(v), 'utf-8')
+            updates.append((k, v_s))
+            rw_set_list.append(RWSet({}, {k: hash(v_s)}))
+        
         return Transaction(txn_id, ts, updates, rw_set_list)
 
     def handleConnection(self, req_sock):
@@ -52,12 +50,17 @@ class Client:
             if verbose:
                 print("Recv msg {0}\n".format(req))
             body = req['body']
+            self.lock.acquire()
             if req['msg_type'] == MSG.DECISION:
                 if self.cntr < self.global_config['client']['num_txns']:
                     self.recvDecision(body['final_decision'])
                 else:
                     self.logResults()
+                    self.lock.release()
                     break
+            elif req['msg_type'] == MSG.RES_DATA:
+                self.recvResData(body['k'], body['data'])
+            self.lock.release()
                     
     def logResults(self):
         print('Done!')
@@ -75,6 +78,18 @@ class Client:
         fd.write(msg)
         fd.close()
 
+    def initTransaction(self):
+        self.data_buf = []
+        for i in range(self.global_config['client']['num_ops']):
+            shard_i = random.randint(0, len(self.global_config['shards']) - 1)
+            if i < len(self.global_config['shards']):
+                shard_i = i
+            strt = shard_i * self.global_config['num_elements'] + 1
+            k = random.randint(strt, strt + self.global_config['num_elements'] - 1)
+            key = bytes('k' + str(k), 'utf-8')
+            msg = self.msg_mgr.create_req_data_msg(key)
+            Messenger.get().send(msg, (self.global_config['shards'][shard_i]['ip_addr'], self.global_config['shards'][shard_i]['port']))
+
     def performTransaction(self):
         self.cntr += 1
         txn = self.createTxn()
@@ -82,7 +97,13 @@ class Client:
         Messenger.get().send(msg, (self.global_config['shards'][0]['ip_addr'], self.global_config['shards'][0]['port']))
 
     def recvDecision(self, final_decision):
-        self.performTransaction()
+        self.initTransaction()
+
+    def recvResData(self, k, data):
+        v, r_ts, w_ts = data
+        self.data_buf.append((k, v))
+        if len(self.data_buf) == self.global_config['client']['num_ops']:
+            self.performTransaction()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -98,9 +119,10 @@ if __name__ == "__main__":
     client_sock.bind((client_config['ip_addr'], client_config['port']))
     client_sock.listen(5)
     globalTime = time.time()
-    txn_t = threading.Thread(target=cl.performTransaction)
+    txn_t = threading.Thread(target=cl.initTransaction)
     txn_t.start()
-    (req_sock, addr) = client_sock.accept()
-    t = threading.Thread(target=cl.handleConnection, args=(req_sock,))
-    t.start()
+    while True:
+        (req_sock, addr) = client_sock.accept()
+        t = threading.Thread(target=cl.handleConnection, args=(req_sock,))
+        t.start()
     

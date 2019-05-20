@@ -2,12 +2,14 @@ from enum import Enum
 import pickle
 
 class MSG(Enum):
-	END_TRANSACTION = 0
-	GET_VOTE = 1
-	VOTE = 2
-	PREPARE = 3
-	ACK = 4
-	DECISION = 5
+	REQ_DATA = 0
+	RES_DATA = 1
+	END_TRANSACTION = 2
+	GET_VOTE = 3
+	VOTE = 4
+	PREPARE = 5
+	ACK = 6
+	DECISION = 7
 
 """
 All messages will be sent as a utf-8 encoded json object and will have the following format:
@@ -34,6 +36,19 @@ class MessageManager:
 			'body': body
 		}
 		return str(msg).encode('utf-8')
+
+	def create_req_data_msg(self, k):
+		req_data_body = {
+			'k': k
+		}
+		return self.create_msg(MSG.REQ_DATA, req_data_body)
+
+	def create_res_data_msg(self, k, data):
+		res_data_body = {
+			'k': k,
+			'data': data
+		}
+		return self.create_msg(MSG.RES_DATA, res_data_body)
 
 	def create_end_transaction_msg(self, txn):
 		end_txn_body = {

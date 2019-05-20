@@ -40,7 +40,9 @@ class Shard:
 			print("Recv msg {0}\n".format(req))
 		body = req['body']
 		self.lock.acquire()
-		if req['msg_type'] == MSG.END_TRANSACTION:				
+		if req['msg_type'] == MSG.REQ_DATA:				
+			self.recvReqData(req, body['k'])
+		elif req['msg_type'] == MSG.END_TRANSACTION:				
 			rw_set_list = pickle.loads(body['rw_set_list'])
 			self.recvEndTransaction(req, body['txn_id'], body['ts'], rw_set_list, body['updates'])
 		elif req['msg_type'] == MSG.GET_VOTE:
@@ -66,6 +68,10 @@ class Shard:
 				break
 			t = threading.Thread(target=self.handleReq, args=(req,))
 			t.start()
+
+	def recvReqData(self, req, k):
+		msg = self.msg_mgr.create_res_data_msg(k, self.data[k])
+		Messenger.get().send(msg, req['addr'])
 
 	def recvEndTransaction(self, req, txn_id, ts, rw_set_list, updates):
 		if self.current_execution:

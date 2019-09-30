@@ -6,13 +6,15 @@ import socket
 import sys
 import threading
 import time
-sys.path.insert(0, './lib')
+import os
+CURR_DIR = os.path.dirname(__file__)
+sys.path.insert(0, CURR_DIR + '/lib')
 from blockchain import *
 from collections import deque
 from messenger import Messenger
 from msg_types import MSG, MessageManager
 from cosi import *
-sys.path.insert(0, './mht-cpp/src/wrappers')
+sys.path.insert(0, CURR_DIR + '/mht-cpp/src/wrappers')
 from merkle_tree import MerkleTree, VO_C
 
 class CurrentExecution:

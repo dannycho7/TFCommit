@@ -7,12 +7,14 @@ import threading
 import random
 import time
 import os
-sys.path.insert(0, './lib')
+CURR_DIR = os.path.dirname(__file__)
+sys.path.insert(0, CURR_DIR + '/lib')
 from blockchain import RWSet
 from messenger import Messenger
 from msg_types import MessageManager, MSG
 
 OPS_PER_TXN = 5
+
 class Transaction:
     def __init__(self, txn_id, ts, updates, rw_set_list):
         self.id = txn_id

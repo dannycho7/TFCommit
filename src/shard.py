@@ -9,10 +9,12 @@ import time
 sys.path.insert(0, './lib')
 from blockchain import *
 from collections import deque
-from merkle_tree import MerkleTree, VO_C
 from messenger import Messenger
 from msg_types import MSG, MessageManager
 from cosi import *
+sys.path.insert(0, './mht-cpp/src/wrappers')
+from merkle_tree import MerkleTree, VO_C
+
 class CurrentExecution:
 	def __init__(self, block):
 		self.ack_resps = []

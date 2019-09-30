@@ -8,7 +8,7 @@ git submodule update --init --recursive
 ```
 Build the Merkle Hash Tree CPP implementation:
 ```sh
-make -C mht-cpp main mhtc.so
+make -C src/mht-cpp main mhtc.so
 ```
 If you don't have `fastecdsa` installed:
 ```sh
